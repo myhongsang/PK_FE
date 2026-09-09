@@ -1,32 +1,61 @@
-# React + TypeScript + Vite
+# PK FE
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Giao diện người dùng (Frontend) xây dựng bằng **Vite + Vue 3 + TypeScript**, UI library dùng
+[shadcn-vue](https://www.shadcn-vue.com/) (port của [shadcn/ui](https://ui.shadcn.com/) cho Vue)
++ [Tailwind CSS v4](https://tailwindcss.com/).
 
-Currently, two official plugins are available:
+## Màn hình hiện có
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Login** (`src/views/LoginView.vue`) — form đăng nhập với validation, hiển thị/ẩn mật khẩu,
+  trạng thái loading, thông báo lỗi, "Ghi nhớ đăng nhập" và đăng nhập bằng Google/GitHub (mock).
 
-## React Compiler
+Tài khoản demo: `admin@example.com` / `123456`
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Cấu trúc thư mục
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```
+src/
+├── api/auth.ts           # Mock auth service (thay bằng API thật khi backend sẵn sàng)
+├── components/
+│   └── ui/               # Các component shadcn-vue (button, input, card, ...)
+├── lib/utils.ts          # Hàm cn() gộp class Tailwind
+├── views/LoginView.vue   # Màn hình đăng nhập
+├── App.vue
+├── main.ts
+└── style.css             # Theme Tailwind v4 + CSS variables của shadcn
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Cài đặt
+
+```bash
+npm install
+```
+
+## Chạy dev server
+
+```bash
+npm run dev
+```
+
+Mở trình duyệt tại địa chỉ được in ra terminal (mặc định `http://localhost:5173`).
+
+## Build production
+
+```bash
+npm run build
+```
+
+## Thêm component shadcn-vue mới
+
+```bash
+npx shadcn-vue@latest add dialog
+```
+
+## Ký thuật chính
+
+- **Vite** — dev server & build cực nhanh
+- **Vue 3** với `<script setup lang="ts">`
+- **Tailwind CSS v4** — cấu hình qua CSS (`@theme inline`), dùng plugin `@tailwindcss/vite`
+- **shadcn-vue** — source code component nằm trực tiếp trong `src/components/ui`, dễ chỉnh sửa
+- **reka-ui** — primitives xây dựng component có accessibility (a11y)
+- **@lucide/vue** — bộ icon
