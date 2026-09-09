@@ -9,3 +9,5 @@ export const API_ENDPOINTS = {
 } as const
 
 export const TOKEN_STORAGE_KEY = 'access_token'
+
+export const USER_STORAGE_KEY = 'user'
