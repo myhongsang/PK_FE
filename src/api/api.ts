@@ -1,9 +1,9 @@
 import axios from 'axios'
 
-export const TOKEN_STORAGE_KEY = 'access_token'
+import { API_BASE_URL, TOKEN_STORAGE_KEY } from '@/constants'
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },

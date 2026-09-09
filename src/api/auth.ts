@@ -1,4 +1,5 @@
-import api, { TOKEN_STORAGE_KEY } from './api'
+import api from './api'
+import { API_ENDPOINTS, TOKEN_STORAGE_KEY } from '@/constants'
 
 export interface LoginPayload {
   email: string
@@ -19,7 +20,7 @@ export async function login(
   payload: LoginPayload
 ): Promise<LoginResult> {
   try {
-    const response = await api.post('/auth/login', {
+    const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, {
       email: payload.email,
       password: payload.password,
     })
