@@ -1,4 +1,5 @@
-import api, { TOKEN_STORAGE_KEY } from './api'
+import api from './api'
+import { API_ENDPOINTS, TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from '@/constants'
 
 export interface LoginPayload {
   email: string
@@ -19,7 +20,7 @@ export async function login(
   payload: LoginPayload
 ): Promise<LoginResult> {
   try {
-    const response = await api.post('/auth/login', {
+    const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, {
       email: payload.email,
       password: payload.password,
     })
@@ -38,8 +39,10 @@ export async function login(
       },
     }
 
-    // Lưu token để interceptor tự gắn vào mọi request sau này (users, products...)
+    // Lưu phiên đăng nhập để refresh trang không bị bắt đăng nhập lại
+    // (token -> interceptor tự gắn vào header; user -> hiển thị tên trên UI)
     localStorage.setItem(TOKEN_STORAGE_KEY, result.accessToken)
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(result.user))
 
     return result
   } catch (error: any) {
@@ -52,4 +55,34 @@ export async function login(
 
 export function signOut(): void {
   localStorage.removeItem(TOKEN_STORAGE_KEY)
+  localStorage.removeItem(USER_STORAGE_KEY)
+}
+
+/** Khôi phục phiên đăng nhập đã lưu trong localStorage (nếu có) */
+export function getStoredSession(): LoginResult | null {
+  try {
+    const accessToken = localStorage.getItem(TOKEN_STORAGE_KEY)
+    const rawUser = localStorage.getItem(USER_STORAGE_KEY)
+
+    // Thiếu token hoặc thông tin user -> coi như chưa đăng nhập
+    if (!accessToken || !rawUser)
+      return null
+
+    const storedUser: any = JSON.parse(rawUser)
+
+    return {
+      accessToken,
+      user: {
+        id: storedUser?.id ?? '',
+        name: storedUser?.name ?? '',
+        email: storedUser?.email ?? '',
+      },
+    }
+  }
+  catch {
+    // Dữ liệu trong localStorage bị hỏng -> dọn sạch và yêu cầu đăng nhập lại
+    localStorage.removeItem(TOKEN_STORAGE_KEY)
+    localStorage.removeItem(USER_STORAGE_KEY)
+    return null
+  }
 }

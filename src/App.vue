@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-import { signOut as clearSession, type LoginResult } from '@/api/auth'
+import { getStoredSession, signOut as clearSession, type LoginResult } from '@/api/auth'
 import DashboardView from '@/views/DashboardView.vue'
 import LoginView from '@/views/LoginView.vue'
 
-const user = ref<LoginResult | null>(null)
+// Khôi phục phiên đăng nhập đã lưu trong localStorage (nếu có)
+// -> refresh trang không bị bắt đăng nhập lại
+const user = ref<LoginResult | null>(getStoredSession())
 
 function handleLoggedIn(result: LoginResult) {
   user.value = result
