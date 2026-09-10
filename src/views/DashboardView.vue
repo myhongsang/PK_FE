@@ -5,10 +5,13 @@ import { LoaderCircleIcon, LogOutIcon, PackageIcon, RefreshCwIcon, TriangleAlert
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { getProducts, type ProductItem } from '@/api/products'
-import { getUsers, type UserItem } from '@/api/users'
-import type { LoginResult } from '@/api/auth'
+import UsersTable from '@/components/UsersTable.vue'
+import ProductsTable from '@/components/ProductsTable.vue'
+import { getProducts,  } from '@/api/products'
+import type { ProductItem } from '@/types/product'
+import { getUsers, } from '@/api/users'
+import type { UserItem } from '@/types/user'
+import type { LoginResult } from '@/types/auth'
 
 const props = defineProps<{
   user: LoginResult
@@ -36,10 +39,6 @@ const isEmpty = computed(() =>
   activeTab.value === 'users' ? users.value.length === 0 : products.value.length === 0,
 )
 
-function formatPrice(price: number | string) {
-  return typeof price === 'number' ? price.toLocaleString('vi-VN') : price
-}
-
 async function loadData() {
   loading.value = true
   errorMessage.value = ''
@@ -53,7 +52,7 @@ async function loadData() {
   catch (error) {
     errorMessage.value = error instanceof Error
       ? error.message
-      : 'Không thể tải dữ liệu. Vui lòng thử lại.'
+      : 'Unable to load data. Please try again.'
   }
   finally {
     loading.value = false
@@ -161,43 +160,9 @@ onMounted(loadData)
               {{ activeTab === 'users' ? 'Chưa có người dùng nào.' : 'Chưa có sản phẩm nào.' }}
             </p>
 
-            <Table v-else-if="activeTab === 'users'">
-              <TableHeader>
-                <TableRow>
-                  <TableHead class="w-16">ID</TableHead>
-                  <TableHead>Tên</TableHead>
-                  <TableHead>Email</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-for="item in users" :key="item.id">
-                  <TableCell class="text-muted-foreground">{{ item.id }}</TableCell>
-                  <TableCell class="font-medium">{{ item.name }}</TableCell>
-                  <TableCell class="text-muted-foreground">{{ item.email }}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+            <UsersTable v-else-if="activeTab === 'users'" :users="users" />
 
-            <Table v-else>
-              <TableHeader>
-                <TableRow>
-                  <TableHead class="w-16">ID</TableHead>
-                  <TableHead>Tên sản phẩm</TableHead>
-                  <TableHead>Mô tả</TableHead>
-                  <TableHead class="text-right">Giá</TableHead>
-                  <TableHead class="text-center">Số lượng</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-for="item in products" :key="item.id">
-                  <TableCell class="text-muted-foreground">{{ item.id }}</TableCell>
-                  <TableCell class="font-medium">{{ item.name }}</TableCell>
-                  <TableCell class="text-muted-foreground">{{ item.description }}</TableCell>
-                  <TableCell class="text-right">{{ formatPrice(item.price) }}</TableCell>
-                  <TableCell class="text-center">{{ item.stock }}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+            <ProductsTable v-else :products="products" />
           </CardContent>
         </Card>
       </main>
