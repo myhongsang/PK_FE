@@ -1,17 +1,16 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { EyeIcon, EyeOffIcon, LoaderCircleIcon } from '@lucide/vue'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { login, type LoginResult } from '@/api/auth'
+import { login, } from '@/api/auth'
 
-const emit = defineEmits<{
-  loggedIn: [LoginResult]
-}>()
+const router = useRouter()
 
 const form = reactive({
   email: '',
@@ -30,17 +29,17 @@ function validate(): boolean {
   fieldErrors.password = undefined
 
   if (!form.email.trim()) {
-    fieldErrors.email = 'Vui lòng nhập email.'
+    fieldErrors.email = 'Please enter your email.'
   }
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-    fieldErrors.email = 'Địa chỉ email không hợp lệ.'
+    fieldErrors.email = 'Invalid email address.'
   }
 
   if (!form.password) {
-    fieldErrors.password = 'Vui lòng nhập mật khẩu.'
+    fieldErrors.password = 'Please enter your password.'
   }
   else if (form.password.length < 6) {
-    fieldErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự.'
+    fieldErrors.password = 'Password must be at least 6 characters.'
   }
 
   return !fieldErrors.email && !fieldErrors.password
@@ -54,12 +53,12 @@ async function onSubmit() {
 
   loading.value = true
   try {
-    const result = await login({
+    await login({
       email: form.email.trim(),
       password: form.password,
     })
 
-    emit('loggedIn', result)
+    router.replace('/dashboard')
   }
   catch (error) {
     formError.value = error instanceof Error
@@ -78,26 +77,16 @@ async function onSubmit() {
       <div class="w-full max-w-sm space-y-6">
         <div class="flex flex-col gap-1.5">
           <h1 class="text-2xl font-bold tracking-tight text-foreground">
-            Đăng nhập
+            Login
           </h1>
           <p class="text-sm text-muted-foreground">
-            Nhập email và mật khẩu để truy cập tài khoản của bạn.
+            Enter your email and password to access your account.
           </p>
         </div>
 
         <Card class="shadow-lg shadow-zinc-950/5">
-          <CardHeader>
-            <CardTitle class="text-lg">
-              Chào mừng trở lại
-            </CardTitle>
-            <CardDescription>
-              Đăng nhập để tiếp tục sử dụng hệ thống.
-            </CardDescription>
-          </CardHeader>
-
           <CardContent>
             <form class="grid gap-4" novalidate @submit.prevent="onSubmit">
-              <!-- Email -->
               <div class="grid gap-2">
                 <Label for="email">Email</Label>
                 <Input
@@ -116,7 +105,7 @@ async function onSubmit() {
 
               <div class="grid gap-2">
                 <div class="flex items-center justify-between">
-                  <Label for="password">Mật khẩu</Label>
+                  <Label for="password">Password</Label>
                 </div>
                 <div class="relative">
                   <Input
@@ -132,7 +121,7 @@ async function onSubmit() {
                   <button
                     type="button"
                     class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
-                    :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+                    :aria-label="showPassword ? 'Hide password' : 'Show password'"
                     tabindex="-1"
                     @click="showPassword = !showPassword"
                   >
@@ -151,20 +140,10 @@ async function onSubmit() {
 
               <Button type="submit" class="w-full" :disabled="loading">
                 <LoaderCircleIcon v-if="loading" class="animate-spin" aria-hidden="true" />
-                {{ loading ? 'Đang đăng nhập…' : 'Đăng nhập' }}
+                {{ loading ? 'Logging in…' : 'Log in' }}
               </Button>
             </form>
           </CardContent>
-
-          <CardFooter class="flex-col gap-3">
-            <p class="text-xs text-muted-foreground">
-              Chưa có tài khoản?
-              <a
-                href="#"
-                class="font-medium text-foreground underline-offset-4 hover:underline"
-              >Đăng ký ngay</a>
-            </p>
-          </CardFooter>
         </Card>
 
       </div>
