@@ -1,13 +1,7 @@
 import api from './api'
 import { API_ENDPOINTS } from '@/constants'
 
-export interface ProductItem {
-  id: number
-  name: string
-  description: string
-  price: number | string
-  stock: number
-}
+import type { ProductItem } from '@/types/product'
 
 function mapProduct(raw: any): ProductItem {
   return {
@@ -29,7 +23,7 @@ export async function getProducts(): Promise<ProductItem[]> {
   } catch (error: any) {
     throw new Error(
       error.response?.data?.message ||
-      'Không thể tải danh sách sản phẩm. Vui lòng thử lại.'
+      'Unable to load the product list. Please try again.'
     )
   }
 }

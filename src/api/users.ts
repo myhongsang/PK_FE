@@ -1,11 +1,7 @@
 import api from './api'
 import { API_ENDPOINTS } from '@/constants'
 
-export interface UserItem {
-  id: number
-  name: string
-  email: string
-}
+import type { UserItem } from '@/types/user'
 
 function mapUser(raw: any): UserItem {
   return {
