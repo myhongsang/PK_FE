@@ -1,5 +1,5 @@
 import api from '@/api/api'
-import { API_ENDPOINTS, TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from '@/constants'
+import { API_ENDPOINTS, TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from '@/constants/api'
 import type { LoginPayload, LoginResult } from '@/types/auth'
 
 export async function login(

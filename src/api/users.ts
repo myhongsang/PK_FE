@@ -1,5 +1,5 @@
 import api from '@/api/api'
-import { API_ENDPOINTS } from '@/constants'
+import { API_ENDPOINTS } from '@/constants/api'
 
 import type { UserItem } from '@/types/user'
 
