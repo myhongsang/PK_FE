@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { EyeIcon, EyeOffIcon, LoaderCircleIcon } from '@lucide/vue'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { login, } from '@/api/auth'
-import type { LoginResult } from '@/types/auth'
 
-const emit = defineEmits<{
-  loggedIn: [LoginResult]
-}>()
+const router = useRouter()
 
 const form = reactive({
   email: '',
@@ -31,17 +29,17 @@ function validate(): boolean {
   fieldErrors.password = undefined
 
   if (!form.email.trim()) {
-    fieldErrors.email = 'Vui lòng nhập email.'
+    fieldErrors.email = 'Please enter your email.'
   }
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-    fieldErrors.email = 'Địa chỉ email không hợp lệ.'
+    fieldErrors.email = 'Invalid email address.'
   }
 
   if (!form.password) {
-    fieldErrors.password = 'Vui lòng nhập mật khẩu.'
+    fieldErrors.password = 'Please enter your password.'
   }
   else if (form.password.length < 6) {
-    fieldErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự.'
+    fieldErrors.password = 'Password must be at least 6 characters.'
   }
 
   return !fieldErrors.email && !fieldErrors.password
@@ -55,12 +53,12 @@ async function onSubmit() {
 
   loading.value = true
   try {
-    const result = await login({
+    await login({
       email: form.email.trim(),
       password: form.password,
     })
 
-    emit('loggedIn', result)
+    router.replace('/dashboard')
   }
   catch (error) {
     formError.value = error instanceof Error
