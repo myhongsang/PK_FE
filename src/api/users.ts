@@ -1,10 +1,7 @@
-import api from './api'
+import api from '@/api/api'
+import { API_ENDPOINTS } from '@/constants/api'
 
-export interface UserItem {
-  id: number
-  name: string
-  email: string
-}
+import type { UserItem } from '@/types/user'
 
 function mapUser(raw: any): UserItem {
   return {
@@ -16,7 +13,7 @@ function mapUser(raw: any): UserItem {
 
 export async function getUsers(): Promise<UserItem[]> {
   try {
-    const response = await api.get('/users')
+    const response = await api.get(API_ENDPOINTS.USERS)
     const data = response.data
     const rows = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []
 

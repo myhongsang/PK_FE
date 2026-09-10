@@ -1,15 +1,14 @@
 import axios from 'axios'
 
-export const TOKEN_STORAGE_KEY = 'access_token'
+import { API_BASE_URL, API_ENDPOINTS, TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from '@/constants/api'
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-// Tự động gắn Authorization: Bearer <token> cho mọi request sau khi đăng nhập
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY)
   if (token)
@@ -17,5 +16,21 @@ api.interceptors.request.use((config) => {
 
   return config
 })
+
+api.interceptors.response.use(
+  response => response,
+  (error) => {
+    if (
+      error.response?.status === 401
+      && error.config?.url !== API_ENDPOINTS.AUTH.LOGIN
+    ) {
+      localStorage.removeItem(TOKEN_STORAGE_KEY)
+      localStorage.removeItem(USER_STORAGE_KEY)
+      window.location.reload()
+    }
+
+    return Promise.reject(error)
+  },
+)
 
 export default api

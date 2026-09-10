@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-import { signOut as clearSession, type LoginResult } from '@/api/auth'
+import { getStoredSession, signOut as clearSession } from '@/api/auth'
+import type { LoginResult } from '@/types/auth'
 import DashboardView from '@/views/DashboardView.vue'
 import LoginView from '@/views/LoginView.vue'
 
-const user = ref<LoginResult | null>(null)
+const user = ref<LoginResult | null>(getStoredSession())
 
 function handleLoggedIn(result: LoginResult) {
   user.value = result
