@@ -79,26 +79,16 @@ async function onSubmit() {
       <div class="w-full max-w-sm space-y-6">
         <div class="flex flex-col gap-1.5">
           <h1 class="text-2xl font-bold tracking-tight text-foreground">
-            Đăng nhập
+            Login
           </h1>
           <p class="text-sm text-muted-foreground">
-            Nhập email và mật khẩu để truy cập tài khoản của bạn.
+            Enter your email and password to access your account.
           </p>
         </div>
 
         <Card class="shadow-lg shadow-zinc-950/5">
-          <CardHeader>
-            <CardTitle class="text-lg">
-              Chào mừng trở lại
-            </CardTitle>
-            <CardDescription>
-              Đăng nhập để tiếp tục sử dụng hệ thống.
-            </CardDescription>
-          </CardHeader>
-
           <CardContent>
             <form class="grid gap-4" novalidate @submit.prevent="onSubmit">
-              <!-- Email -->
               <div class="grid gap-2">
                 <Label for="email">Email</Label>
                 <Input
@@ -117,7 +107,7 @@ async function onSubmit() {
 
               <div class="grid gap-2">
                 <div class="flex items-center justify-between">
-                  <Label for="password">Mật khẩu</Label>
+                  <Label for="password">Password</Label>
                 </div>
                 <div class="relative">
                   <Input
@@ -133,7 +123,7 @@ async function onSubmit() {
                   <button
                     type="button"
                     class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
-                    :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+                    :aria-label="showPassword ? 'Hide password' : 'Show password'"
                     tabindex="-1"
                     @click="showPassword = !showPassword"
                   >
@@ -152,20 +142,10 @@ async function onSubmit() {
 
               <Button type="submit" class="w-full" :disabled="loading">
                 <LoaderCircleIcon v-if="loading" class="animate-spin" aria-hidden="true" />
-                {{ loading ? 'Đang đăng nhập…' : 'Đăng nhập' }}
+                {{ loading ? 'Logging in…' : 'Log in' }}
               </Button>
             </form>
           </CardContent>
-
-          <CardFooter class="flex-col gap-3">
-            <p class="text-xs text-muted-foreground">
-              Chưa có tài khoản?
-              <a
-                href="#"
-                class="font-medium text-foreground underline-offset-4 hover:underline"
-              >Đăng ký ngay</a>
-            </p>
-          </CardFooter>
         </Card>
 
       </div>
