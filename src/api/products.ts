@@ -1,4 +1,4 @@
-import api from './api'
+import api from '@/api/api'
 import { API_ENDPOINTS } from '@/constants'
 
 import type { ProductItem } from '@/types/product'
