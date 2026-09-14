@@ -37,9 +37,6 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  // Validate the stored token with the BE (not just its presence in
-  // localStorage) before allowing access. The result is cached per page
-  // load, so only the first navigation performs the network check.
   const session = await verifyStoredSession()
 
   if (!to.meta.public && !session)
