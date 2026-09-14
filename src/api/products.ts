@@ -1,4 +1,5 @@
 import api from '@/api/api'
+import i18n from '@/i18n'
 import { API_ENDPOINTS } from '@/constants/api'
 
 import type { ProductItem } from '@/types/product'
@@ -23,7 +24,7 @@ export async function getProducts(): Promise<ProductItem[]> {
   } catch (error: any) {
     throw new Error(
       error.response?.data?.message ||
-      'Unable to load the product list. Please try again.'
+      i18n.global.t('products.loadFailed')
     )
   }
 }

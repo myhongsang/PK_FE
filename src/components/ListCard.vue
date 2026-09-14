@@ -36,14 +36,14 @@ const emit = defineEmits<{
           <span>{{ errorMessage }}</span>
           <Button size="sm" variant="outline" @click="emit('retry')">
             <RefreshCwIcon aria-hidden="true" />
-            Thử lại
+            {{ $t('common.retry') }}
           </Button>
         </AlertDescription>
       </Alert>
 
       <div v-if="loading" class="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
         <LoaderCircleIcon class="size-5 animate-spin" aria-hidden="true" />
-        Đang tải dữ liệu…
+        {{ $t('common.loading') }}
       </div>
 
       <p v-else-if="isEmpty" class="py-12 text-center text-sm text-muted-foreground">

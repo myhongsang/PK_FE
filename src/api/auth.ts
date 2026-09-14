@@ -1,4 +1,5 @@
 import api from '@/api/api'
+import i18n from '@/i18n'
 import { API_ENDPOINTS, TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from '@/constants/api'
 import type { LoginPayload, LoginResult } from '@/types/auth'
 
@@ -34,7 +35,7 @@ export async function login(
   } catch (error: any) {
     throw new Error(
       error.response?.data?.message ||
-      'Incorrect email or password. Please try again.'
+      i18n.global.t('auth.loginFailed')
     )
   }
 }

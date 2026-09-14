@@ -1,4 +1,5 @@
 import api from '@/api/api'
+import i18n from '@/i18n'
 import { API_ENDPOINTS } from '@/constants/api'
 
 import type { UserItem } from '@/types/user'
@@ -21,7 +22,7 @@ export async function getUsers(): Promise<UserItem[]> {
   } catch (error: any) {
     throw new Error(
       error.response?.data?.message ||
-      'Không thể tải danh sách người dùng. Vui lòng thử lại.'
+      i18n.global.t('users.loadFailed')
     )
   }
 }

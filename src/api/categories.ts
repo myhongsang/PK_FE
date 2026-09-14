@@ -1,4 +1,5 @@
 import api from '@/api/api'
+import i18n from '@/i18n'
 import { API_ENDPOINTS } from '@/constants/api'
 
 import type { CategoryItem } from '@/types/category'
@@ -26,7 +27,7 @@ export async function getCategories(): Promise<CategoryItem[]> {
   } catch (error: any) {
     throw new Error(
       error.response?.data?.message ||
-      'Không thể tải danh sách danh mục. Vui lòng thử lại.'
+      i18n.global.t('categories.loadFailed')
     )
   }
 }
@@ -40,7 +41,7 @@ export async function createCategory(payload: CategoryPayload): Promise<Category
   } catch (error: any) {
     throw new Error(
       error.response?.data?.message ||
-      'Không thể thêm danh mục. Vui lòng thử lại.'
+      i18n.global.t('categories.createFailed')
     )
   }
 }
@@ -57,7 +58,7 @@ export async function updateCategory(
   } catch (error: any) {
     throw new Error(
       error.response?.data?.message ||
-      'Không thể cập nhật danh mục. Vui lòng thử lại.'
+      i18n.global.t('categories.updateFailed')
     )
   }
 }
@@ -68,7 +69,7 @@ export async function deleteCategory(id: CategoryItem['id']): Promise<void> {
   } catch (error: any) {
     throw new Error(
       error.response?.data?.message ||
-      'Không thể xoá danh mục. Vui lòng thử lại.'
+      i18n.global.t('categories.deleteFailed')
     )
   }
 }

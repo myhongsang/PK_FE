@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { PencilIcon, Trash2Icon } from '@lucide/vue'
 
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { CategoryItem } from '@/types/category'
+
+const { t } = useI18n()
 
 defineProps<{
   categories: CategoryItem[]
@@ -19,10 +22,10 @@ const emit = defineEmits<{
   <Table>
     <TableHeader>
       <TableRow>
-        <TableHead class="w-16">ID</TableHead>
-        <TableHead>Tên danh mục</TableHead>
-        <TableHead>Mô tả</TableHead>
-        <TableHead class="w-28 text-right">Thao tác</TableHead>
+        <TableHead class="w-16">{{ t('categories.columns.id') }}</TableHead>
+        <TableHead>{{ t('categories.columns.name') }}</TableHead>
+        <TableHead>{{ t('categories.columns.description') }}</TableHead>
+        <TableHead class="w-28 text-right">{{ t('categories.columns.actions') }}</TableHead>
       </TableRow>
     </TableHeader>
     <TableBody>
@@ -35,7 +38,7 @@ const emit = defineEmits<{
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label="Sửa danh mục"
+              :aria-label="t('categories.editAction')"
               @click="emit('edit', item)"
             >
               <PencilIcon aria-hidden="true" />
@@ -44,7 +47,7 @@ const emit = defineEmits<{
               variant="ghost"
               size="icon-sm"
               class="text-destructive hover:text-destructive"
-              aria-label="Xoá danh mục"
+              :aria-label="t('categories.deleteAction')"
               @click="emit('remove', item)"
             >
               <Trash2Icon aria-hidden="true" />

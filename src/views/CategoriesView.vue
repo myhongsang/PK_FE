@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { LoaderCircleIcon, PlusIcon } from '@lucide/vue'
 
 import { createCategory, deleteCategory, getCategories, updateCategory } from '@/api/categories'
@@ -12,12 +13,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { CategoryItem } from '@/types/category'
 
+const { t } = useI18n()
+
 const categories = ref<CategoryItem[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 
 const description = computed(() =>
-  `Showing ${categories.value.length} categories.`,
+  t('categories.showing', { count: categories.value.length }),
 )
 
 const formOpen = ref(false)
@@ -31,7 +34,7 @@ const formError = ref('')
 const saving = ref(false)
 
 const dialogTitle = computed(() =>
-  editing.value ? 'Edit category' : 'Add category',
+  editing.value ? t('categories.editTitle') : t('categories.createTitle'),
 )
 
 function openCreate() {
@@ -56,7 +59,7 @@ function validate(): boolean {
   fieldErrors.name = undefined
 
   if (!form.name.trim())
-    fieldErrors.name = 'Please enter the category name.'
+    fieldErrors.name = t('categories.nameRequired')
 
   return !fieldErrors.name
 }
@@ -85,7 +88,7 @@ async function onSubmit() {
   catch (error) {
     formError.value = error instanceof Error
       ? error.message
-      : 'An error occurred. Please try again.'
+      : t('common.genericError')
   }
   finally {
     saving.value = false
@@ -117,7 +120,7 @@ async function onConfirmDelete() {
   catch (error) {
     deleteError.value = error instanceof Error
       ? error.message
-      : 'An error occurred. Please try again.'
+      : t('common.genericError')
   }
   finally {
     deletingBusy.value = false
@@ -135,7 +138,7 @@ async function loadData() {
   catch (error) {
     errorMessage.value = error instanceof Error
       ? error.message
-      : 'Unable to load data. Please try again.'
+      : t('common.unableToLoad')
   }
   finally {
     loading.value = false
@@ -147,18 +150,18 @@ onMounted(loadData)
 
 <template>
   <ListCard
-    title="Quản lý danh mục"
+    :title="$t('categories.title')"
     :description="description"
     :loading="loading"
     :error-message="errorMessage"
     :is-empty="categories.length === 0"
-    empty-text="Chưa có danh mục nào."
+    :empty-text="$t('categories.empty')"
     @retry="loadData"
   >
     <template #action>
       <Button @click="openCreate">
         <PlusIcon aria-hidden="true" />
-        Thêm danh mục
+        {{ $t('categories.add') }}
       </Button>
     </template>
 
@@ -174,17 +177,17 @@ onMounted(loadData)
       <DialogHeader>
         <DialogTitle>{{ dialogTitle }}</DialogTitle>
         <DialogDescription>
-          {{ editing ? 'Cập nhật thông tin danh mục.' : 'Nhập thông tin danh mục mới.' }}
+          {{ editing ? $t('categories.editDescription') : $t('categories.createDescription') }}
         </DialogDescription>
       </DialogHeader>
 
       <form class="grid gap-4" novalidate @submit.prevent="onSubmit">
         <div class="grid gap-2">
-          <Label for="category-name">Tên danh mục</Label>
+          <Label for="category-name">{{ $t('categories.name') }}</Label>
           <Input
             id="category-name"
             v-model="form.name"
-            placeholder="Ví dụ: Đồ điện tử"
+            :placeholder="$t('categories.namePlaceholder')"
             :aria-invalid="fieldErrors.name ? true : undefined"
             :disabled="saving"
           />
@@ -194,11 +197,11 @@ onMounted(loadData)
         </div>
 
         <div class="grid gap-2">
-          <Label for="category-description">Mô tả</Label>
+          <Label for="category-description">{{ $t('categories.description') }}</Label>
           <Input
             id="category-description"
             v-model="form.description"
-            placeholder="Mô tả ngắn (không bắt buộc)"
+            :placeholder="$t('categories.descriptionPlaceholder')"
             :disabled="saving"
           />
         </div>
@@ -209,11 +212,11 @@ onMounted(loadData)
 
         <DialogFooter>
           <Button type="button" variant="outline" :disabled="saving" @click="formOpen = false">
-            Huỷ
+            {{ $t('common.cancel') }}
           </Button>
           <Button type="submit" :disabled="saving">
             <LoaderCircleIcon v-if="saving" class="animate-spin" aria-hidden="true" />
-            {{ editing ? 'Lưu thay đổi' : 'Thêm danh mục' }}
+            {{ editing ? $t('common.save') : $t('categories.add') }}
           </Button>
         </DialogFooter>
       </form>
@@ -225,7 +228,7 @@ onMounted(loadData)
       <DialogHeader>
         <DialogTitle>Xoá danh mục</DialogTitle>
         <DialogDescription>
-          Bạn có chắc muốn xoá danh mục "{{ deleting?.name }}"? Hành động này không thể hoàn tác.
+          {{ $t('categories.deleteDescription', { name: deleting?.name }) }}
         </DialogDescription>
       </DialogHeader>
 
@@ -235,11 +238,11 @@ onMounted(loadData)
 
       <DialogFooter>
         <Button variant="outline" :disabled="deletingBusy" @click="deleteOpen = false">
-          Huỷ
+          {{ $t('common.cancel') }}
         </Button>
         <Button variant="destructive" :disabled="deletingBusy" @click="onConfirmDelete">
           <LoaderCircleIcon v-if="deletingBusy" class="animate-spin" aria-hidden="true" />
-          Xoá
+          {{ $t('common.delete') }}
         </Button>
       </DialogFooter>
     </DialogContent>

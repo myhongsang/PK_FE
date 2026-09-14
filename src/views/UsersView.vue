@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { getUsers } from '@/api/users'
 import UsersTable from '@/components/UsersTable.vue'
@@ -7,12 +8,14 @@ import ListCard from '@/components/ListCard.vue'
 import { counts } from '@/stores/counts'
 import type { UserItem } from '@/types/user'
 
+const { t } = useI18n()
+
 const users = ref<UserItem[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 
 const description = computed(() =>
-  `Đang hiển thị ${users.value.length} bản ghi.`,
+  t('common.showing', { count: users.value.length }),
 )
 
 async function loadData() {
@@ -26,7 +29,7 @@ async function loadData() {
   catch (error) {
     errorMessage.value = error instanceof Error
       ? error.message
-      : 'Unable to load data. Please try again.'
+      : t('common.unableToLoad')
   }
   finally {
     loading.value = false
@@ -38,12 +41,12 @@ onMounted(loadData)
 
 <template>
   <ListCard
-    title="Danh sách người dùng"
+    :title="$t('users.title')"
     :description="description"
     :loading="loading"
     :error-message="errorMessage"
     :is-empty="users.length === 0"
-    empty-text="Chưa có người dùng nào."
+    :empty-text="$t('users.empty')"
     @retry="loadData"
   >
     <UsersTable :users="users" />

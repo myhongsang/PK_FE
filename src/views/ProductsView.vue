@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { getProducts } from '@/api/products'
 import ProductsTable from '@/components/ProductsTable.vue'
@@ -7,12 +8,14 @@ import ListCard from '@/components/ListCard.vue'
 import { counts } from '@/stores/counts'
 import type { ProductItem } from '@/types/product'
 
+const { t } = useI18n()
+
 const products = ref<ProductItem[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 
 const description = computed(() =>
-  `Đang hiển thị ${products.value.length} bản ghi.`,
+  t('common.showing', { count: products.value.length }),
 )
 
 async function loadData() {
@@ -26,7 +29,7 @@ async function loadData() {
   catch (error) {
     errorMessage.value = error instanceof Error
       ? error.message
-      : 'Unable to load data. Please try again.'
+      : t('common.unableToLoad')
   }
   finally {
     loading.value = false
@@ -38,12 +41,12 @@ onMounted(loadData)
 
 <template>
   <ListCard
-    title="Danh sách sản phẩm"
+    :title="$t('products.title')"
     :description="description"
     :loading="loading"
     :error-message="errorMessage"
     :is-empty="products.length === 0"
-    empty-text="Chưa có sản phẩm nào."
+    :empty-text="$t('products.empty')"
     @retry="loadData"
   >
     <ProductsTable :products="products" />

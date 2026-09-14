@@ -1,13 +1,20 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { ProductItem } from '@/types/product'
+
+const { t, locale } = useI18n()
 
 defineProps<{
   products: ProductItem[]
 }>()
 
 function formatPrice(price: number | string) {
-  return typeof price === 'number' ? price.toLocaleString('vi-VN') : price
+  if (typeof price !== 'number')
+    return price
+
+  return price.toLocaleString(locale.value === 'vi' ? 'vi-VN' : 'en-US')
 }
 </script>
 
@@ -15,11 +22,11 @@ function formatPrice(price: number | string) {
   <Table>
     <TableHeader>
       <TableRow>
-        <TableHead class="w-16">ID</TableHead>
-        <TableHead>Tên sản phẩm</TableHead>
-        <TableHead>Mô tả</TableHead>
-        <TableHead class="text-right">Giá</TableHead>
-        <TableHead class="text-center">Số lượng</TableHead>
+        <TableHead class="w-16">{{ t('products.columns.id') }}</TableHead>
+        <TableHead>{{ t('products.columns.name') }}</TableHead>
+        <TableHead>{{ t('products.columns.description') }}</TableHead>
+        <TableHead class="text-right">{{ t('products.columns.price') }}</TableHead>
+        <TableHead class="text-center">{{ t('products.columns.stock') }}</TableHead>
       </TableRow>
     </TableHeader>
     <TableBody>
