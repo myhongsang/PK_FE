@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import { login, } from '@/api/auth'
 
 const router = useRouter()
@@ -77,7 +78,8 @@ async function onSubmit() {
 <template>
   <div class="grid min-h-svh w-full">
     <div class="relative flex items-center justify-center bg-background p-6 md:p-10">
-      <div class="absolute right-4 top-4">
+      <div class="absolute right-4 top-4 flex items-center gap-2">
+        <ThemeToggle tone="light" />
         <LanguageSwitcher tone="light" />
       </div>
 

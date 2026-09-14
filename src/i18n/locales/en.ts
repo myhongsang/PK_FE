@@ -11,6 +11,11 @@ export default {
     genericError: 'An error occurred. Please try again.',
     unableToLoad: 'Unable to load data. Please try again.',
   },
+  theme: {
+    label: 'Theme',
+    toDark: 'Switch to dark mode',
+    toLight: 'Switch to light mode',
+  },
   auth: {
     title: 'Login',
     subtitle: 'Enter your email and password to access your account.',

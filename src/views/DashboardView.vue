@@ -7,6 +7,7 @@ import { LogOutIcon, PackageIcon, TagsIcon, UsersIcon } from '@lucide/vue'
 import { getStoredSession, signOut as clearSession } from '@/api/auth'
 import { counts } from '@/stores/counts'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -27,13 +28,14 @@ function handleSignOut() {
 
 <template>
   <div class="flex h-svh flex-col bg-background">
-    <header class="flex h-14 shrink-0 items-center justify-between border-b bg-[#16587B] px-4 md:px-6 text-white">
+    <header class="flex h-14 shrink-0 items-center justify-between border-b bg-[#16587B] px-4 md:px-6 text-white dark:bg-[#0B1F2A]">
       <div class="flex items-center gap-2">
-        <span class="flex size-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground">PK</span>
+        <span class="flex size-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground dark:bg-white/15 dark:text-white">PK</span>
         <span class="text-sm font-semibold">{{ $t('nav.brand') }}</span>
       </div>
 
       <div class="flex items-center gap-3">
+        <ThemeToggle tone="dark" />
         <LanguageSwitcher tone="dark" />
 
         <div class="hidden text-right sm:block">
@@ -47,7 +49,7 @@ function handleSignOut() {
     </header>
 
     <div class="flex min-h-0 flex-1">
-      <aside class="hidden w-56 shrink-0 flex-col border-r bg-[#84B3CE] p-3 sm:flex">
+      <aside class="hidden w-56 shrink-0 flex-col border-r bg-[#84B3CE] p-3 sm:flex dark:bg-[#101E28]">
         <p class="text-muted-foreground px-3 pb-2 pt-1 text-xs font-medium tracking-wide uppercase">{{ $t('nav.functions') }}</p>
         <nav class="grid gap-1">
           <RouterLink
@@ -93,7 +95,7 @@ function handleSignOut() {
         </div>
       </aside>
 
-      <main class="min-w-0 flex-1 space-y-6 overflow-y-auto bg-[#F5EEDD] p-4 md:p-6">
+      <main class="min-w-0 flex-1 space-y-6 overflow-y-auto bg-[#F5EEDD] p-4 md:p-6 dark:bg-background">
         <RouterView />
       </main>
     </div>

@@ -11,6 +11,11 @@ export default {
     genericError: 'Đã xảy ra lỗi. Vui lòng thử lại.',
     unableToLoad: 'Không thể tải dữ liệu. Vui lòng thử lại.',
   },
+  theme: {
+    label: 'Giao diện',
+    toDark: 'Chuyển sang giao diện tối',
+    toLight: 'Chuyển sang giao diện sáng',
+  },
   auth: {
     title: 'Đăng nhập',
     subtitle: 'Nhập email và mật khẩu để truy cập tài khoản.',
