@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import { getStoredSession } from '@/api/auth'
+import { verifyStoredSession } from '@/api/auth'
 import DashboardView from '@/views/DashboardView.vue'
 import LoginView from '@/views/LoginView.vue'
 
@@ -36,8 +36,11 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
-  const session = getStoredSession()
+router.beforeEach(async (to) => {
+  // Validate the stored token with the BE (not just its presence in
+  // localStorage) before allowing access. The result is cached per page
+  // load, so only the first navigation performs the network check.
+  const session = await verifyStoredSession()
 
   if (!to.meta.public && !session)
     return { name: 'login' }
