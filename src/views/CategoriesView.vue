@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { refDebounced, watchDebounced } from '@vueuse/core'
 import { LoaderCircleIcon, PlusIcon } from '@lucide/vue'
 
 import { createCategory, deleteCategory, getCategories, updateCategory } from '@/api/categories'
 import CategoriesTable from '@/components/CategoriesTable.vue'
+import SearchInput from '@/components/SearchInput.vue'
 import ListCard from '@/components/ListCard.vue'
 import { counts } from '@/stores/counts'
+import { matchesSearch, type SearchSuggestion } from '@/lib/search'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -19,8 +22,71 @@ const categories = ref<CategoryItem[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 
+const search = ref('')
+const debouncedSearch = refDebounced(search, 300)
+const searchResults = ref<CategoryItem[]>([])
+
+let searchSeq = 0
+
+const displayedCategories = computed(() => {
+  const term = debouncedSearch.value.trim()
+
+  if (!term)
+    return categories.value
+
+  const base = searchResults.value.length > 0 ? searchResults.value : categories.value
+
+  return base.filter(category =>
+    matchesSearch(category.name, term)
+    || matchesSearch(category.description, term))
+})
+
+const suggestions = computed<SearchSuggestion[]>(() => {
+  const term = search.value.trim()
+
+  if (!term || searchResults.value.length === 0)
+    return []
+
+  return searchResults.value
+    .slice(0, 6)
+    .map(category => ({ label: category.name, detail: category.description }))
+})
+
+async function runSearch(term: string) {
+  const clean = term.trim()
+  const seq = ++searchSeq
+
+  if (!clean) {
+    searchResults.value = []
+    return
+  }
+
+  loading.value = true
+  errorMessage.value = ''
+  searchResults.value = []
+
+  try {
+    const rows = await getCategories(clean)
+    if (seq === searchSeq)
+      searchResults.value = rows
+  }
+  catch (error) {
+    if (seq === searchSeq) {
+      errorMessage.value = error instanceof Error
+        ? error.message
+        : t('common.unableToLoad')
+    }
+  }
+  finally {
+    if (seq === searchSeq)
+      loading.value = false
+  }
+}
+
+watchDebounced(search, (value) => { void runSearch(value) }, { debounce: 300 })
+
 const description = computed(() =>
-  t('categories.showing', { count: categories.value.length }),
+  t('categories.showing', { count: displayedCategories.value.length }),
 )
 
 const formOpen = ref(false)
@@ -127,13 +193,16 @@ async function onConfirmDelete() {
   }
 }
 
-async function loadData() {
-  loading.value = true
+async function loadData(showLoading = true) {
+  if (showLoading)
+    loading.value = true
   errorMessage.value = ''
 
   try {
-    categories.value = await getCategories()
-    counts.categories = categories.value.length
+    categories.value = await getCategories(debouncedSearch.value)
+
+    if (!debouncedSearch.value)
+      counts.categories = categories.value.length
   }
   catch (error) {
     errorMessage.value = error instanceof Error
@@ -145,7 +214,11 @@ async function loadData() {
   }
 }
 
-onMounted(loadData)
+watch(debouncedSearch, () => {
+  void loadData(false)
+})
+
+onMounted(() => loadData())
 </script>
 
 <template>
@@ -154,8 +227,8 @@ onMounted(loadData)
     :description="description"
     :loading="loading"
     :error-message="errorMessage"
-    :is-empty="categories.length === 0"
-    :empty-text="$t('categories.empty')"
+    :is-empty="displayedCategories.length === 0"
+    :empty-text="debouncedSearch ? $t('categories.noResults') : $t('categories.empty')"
     @retry="loadData"
   >
     <template #action>
@@ -165,8 +238,14 @@ onMounted(loadData)
       </Button>
     </template>
 
+    <template #toolbar>
+      <div class="max-w-sm">
+        <SearchInput v-model="search" :placeholder="$t('categories.searchPlaceholder')" :suggestions="suggestions" />
+      </div>
+    </template>
+
     <CategoriesTable
-      :categories="categories"
+      :categories="displayedCategories"
       @edit="openEdit"
       @remove="openDelete"
     />

@@ -10,6 +10,8 @@ export default {
     showing: 'Đang hiển thị {count} bản ghi.',
     genericError: 'Đã xảy ra lỗi. Vui lòng thử lại.',
     unableToLoad: 'Không thể tải dữ liệu. Vui lòng thử lại.',
+    search: 'Tìm kiếm',
+    clear: 'Xoá tìm kiếm',
   },
   theme: {
     label: 'Giao diện',
@@ -45,6 +47,8 @@ export default {
   users: {
     title: 'Danh sách người dùng',
     empty: 'Chưa có người dùng nào.',
+    searchPlaceholder: 'Tìm theo tên hoặc email…',
+    noResults: 'Không tìm thấy người dùng nào.',
     columns: {
       id: 'ID',
       name: 'Tên',
@@ -55,6 +59,8 @@ export default {
   products: {
     title: 'Danh sách sản phẩm',
     empty: 'Chưa có sản phẩm nào.',
+    searchPlaceholder: 'Tìm theo tên hoặc mô tả…',
+    noResults: 'Không tìm thấy sản phẩm nào.',
     columns: {
       id: 'ID',
       name: 'Tên sản phẩm',
@@ -68,6 +74,8 @@ export default {
     title: 'Quản lý danh mục',
     showing: 'Đang hiển thị {count} danh mục.',
     empty: 'Chưa có danh mục nào.',
+    searchPlaceholder: 'Tìm theo tên hoặc mô tả danh mục…',
+    noResults: 'Không tìm thấy danh mục nào.',
     add: 'Thêm danh mục',
     name: 'Tên danh mục',
     namePlaceholder: 'Ví dụ: Đồ điện tử',

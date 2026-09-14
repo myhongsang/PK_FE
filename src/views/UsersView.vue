@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { refDebounced, watchDebounced } from '@vueuse/core'
 
 import { getUsers } from '@/api/users'
+import SearchInput from '@/components/SearchInput.vue'
 import UsersTable from '@/components/UsersTable.vue'
 import ListCard from '@/components/ListCard.vue'
 import { counts } from '@/stores/counts'
+import { matchesSearch, type SearchSuggestion } from '@/lib/search'
 import type { UserItem } from '@/types/user'
 
 const { t } = useI18n()
@@ -14,17 +17,83 @@ const users = ref<UserItem[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 
+const search = ref('')
+const debouncedSearch = refDebounced(search, 300)
+const searchResults = ref<UserItem[]>([])
+
+let searchSeq = 0
+
+const displayedUsers = computed(() => {
+  const term = debouncedSearch.value.trim()
+
+  if (!term)
+    return users.value
+
+  const base = searchResults.value.length > 0 ? searchResults.value : users.value
+
+  return base.filter(user =>
+    matchesSearch(user.name, term)
+    || matchesSearch(user.email, term))
+})
+
+const suggestions = computed<SearchSuggestion[]>(() => {
+  const term = search.value.trim()
+
+  if (!term || searchResults.value.length === 0)
+    return []
+
+  return searchResults.value
+    .slice(0, 6)
+    .map(user => ({ label: user.name, detail: user.email }))
+})
+
+async function runSearch(term: string) {
+  const clean = term.trim()
+  const seq = ++searchSeq
+
+  if (!clean) {
+    searchResults.value = []
+    return
+  }
+
+  loading.value = true
+  errorMessage.value = ''
+  searchResults.value = []
+
+  try {
+    const rows = await getUsers(clean)
+    if (seq === searchSeq)
+      searchResults.value = rows
+  }
+  catch (error) {
+    if (seq === searchSeq) {
+      errorMessage.value = error instanceof Error
+        ? error.message
+        : t('common.unableToLoad')
+    }
+  }
+  finally {
+    if (seq === searchSeq)
+      loading.value = false
+  }
+}
+
+watchDebounced(search, (value) => { void runSearch(value) }, { debounce: 300 })
+
 const description = computed(() =>
-  t('common.showing', { count: users.value.length }),
+  t('common.showing', { count: displayedUsers.value.length }),
 )
 
-async function loadData() {
-  loading.value = true
+async function loadData(showLoading = true) {
+  if (showLoading)
+    loading.value = true
   errorMessage.value = ''
 
   try {
-    users.value = await getUsers()
-    counts.users = users.value.length
+    users.value = await getUsers(debouncedSearch.value)
+
+    if (!debouncedSearch.value)
+      counts.users = users.value.length
   }
   catch (error) {
     errorMessage.value = error instanceof Error
@@ -36,7 +105,11 @@ async function loadData() {
   }
 }
 
-onMounted(loadData)
+watch(debouncedSearch, () => {
+  void loadData(false)
+})
+
+onMounted(() => loadData())
 </script>
 
 <template>
@@ -45,10 +118,16 @@ onMounted(loadData)
     :description="description"
     :loading="loading"
     :error-message="errorMessage"
-    :is-empty="users.length === 0"
-    :empty-text="$t('users.empty')"
+    :is-empty="displayedUsers.length === 0"
+    :empty-text="debouncedSearch ? $t('users.noResults') : $t('users.empty')"
     @retry="loadData"
   >
-    <UsersTable :users="users" />
+    <template #toolbar>
+      <div class="max-w-sm">
+        <SearchInput v-model="search" :placeholder="$t('users.searchPlaceholder')" :suggestions="suggestions" />
+      </div>
+    </template>
+
+    <UsersTable :users="displayedUsers" />
   </ListCard>
 </template>

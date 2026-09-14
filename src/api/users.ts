@@ -1,6 +1,7 @@
 import api from '@/api/api'
 import i18n from '@/i18n'
 import { API_ENDPOINTS } from '@/constants/api'
+import { extractRows, fetchAllRows } from '@/api/search'
 
 import type { UserItem } from '@/types/user'
 
@@ -12,11 +13,15 @@ function mapUser(raw: any): UserItem {
   }
 }
 
-export async function getUsers(): Promise<UserItem[]> {
+export async function getUsers(search?: string): Promise<UserItem[]> {
   try {
-    const response = await api.get(API_ENDPOINTS.USERS)
-    const data = response.data
-    const rows = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []
+    const term = search?.trim() ?? ''
+
+    const response = term
+      ? await fetchAllRows(API_ENDPOINTS.USERS, { q: term })
+      : await api.get(API_ENDPOINTS.USERS)
+
+    const rows = Array.isArray(response) ? response : extractRows(response.data)
 
     return rows.map(mapUser)
   } catch (error: any) {

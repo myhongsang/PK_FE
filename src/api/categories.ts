@@ -1,6 +1,7 @@
 import api from '@/api/api'
 import i18n from '@/i18n'
 import { API_ENDPOINTS } from '@/constants/api'
+import { extractRows, fetchAllRows } from '@/api/search'
 
 import type { CategoryItem } from '@/types/category'
 
@@ -17,11 +18,15 @@ function mapCategory(raw: any): CategoryItem {
   }
 }
 
-export async function getCategories(): Promise<CategoryItem[]> {
+export async function getCategories(search?: string): Promise<CategoryItem[]> {
   try {
-    const response = await api.get(API_ENDPOINTS.CATEGORIES)
-    const data = response.data
-    const rows = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []
+    const term = search?.trim() ?? ''
+
+    const response = term
+      ? await fetchAllRows(API_ENDPOINTS.CATEGORIES, { q: term })
+      : await api.get(API_ENDPOINTS.CATEGORIES)
+
+    const rows = Array.isArray(response) ? response : extractRows(response.data)
 
     return rows.map(mapCategory)
   } catch (error: any) {

@@ -30,6 +30,8 @@ const emit = defineEmits<{
     </CardHeader>
 
     <CardContent class="grid gap-4">
+      <slot name="toolbar" />
+
       <Alert v-if="errorMessage" variant="destructive">
         <TriangleAlertIcon aria-hidden="true" />
         <AlertDescription class="flex flex-wrap items-center justify-between gap-3">

@@ -10,6 +10,8 @@ export default {
     showing: 'Showing {count} records.',
     genericError: 'An error occurred. Please try again.',
     unableToLoad: 'Unable to load data. Please try again.',
+    search: 'Search',
+    clear: 'Clear search',
   },
   theme: {
     label: 'Theme',
@@ -45,6 +47,8 @@ export default {
   users: {
     title: 'User list',
     empty: 'No users yet.',
+    searchPlaceholder: 'Search by name or email…',
+    noResults: 'No users found.',
     columns: {
       id: 'ID',
       name: 'Name',
@@ -55,6 +59,8 @@ export default {
   products: {
     title: 'Product list',
     empty: 'No products yet.',
+    searchPlaceholder: 'Search by name or description…',
+    noResults: 'No products found.',
     columns: {
       id: 'ID',
       name: 'Product name',
@@ -68,6 +74,8 @@ export default {
     title: 'Category management',
     showing: 'Showing {count} categories.',
     empty: 'No categories yet.',
+    searchPlaceholder: 'Search by name or description…',
+    noResults: 'No categories found.',
     add: 'Add category',
     name: 'Category name',
     namePlaceholder: 'e.g. Electronics',

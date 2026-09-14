@@ -1,6 +1,7 @@
 import api from '@/api/api'
 import i18n from '@/i18n'
 import { API_ENDPOINTS } from '@/constants/api'
+import { extractRows, fetchAllRows } from '@/api/search'
 
 import type { ProductItem } from '@/types/product'
 
@@ -14,11 +15,15 @@ function mapProduct(raw: any): ProductItem {
   }
 }
 
-export async function getProducts(): Promise<ProductItem[]> {
+export async function getProducts(search?: string): Promise<ProductItem[]> {
   try {
-    const response = await api.get(API_ENDPOINTS.PRODUCTS)
-    const data = response.data
-    const rows = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []
+    const term = search?.trim() ?? ''
+
+    const response = term
+      ? await fetchAllRows(API_ENDPOINTS.PRODUCTS, { q: term })
+      : await api.get(API_ENDPOINTS.PRODUCTS)
+
+    const rows = Array.isArray(response) ? response : extractRows(response.data)
 
     return rows.map(mapProduct)
   } catch (error: any) {
