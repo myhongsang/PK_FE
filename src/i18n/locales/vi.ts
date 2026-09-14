@@ -15,7 +15,7 @@ export default {
     title: 'Đăng nhập',
     subtitle: 'Nhập email và mật khẩu để truy cập tài khoản.',
     email: 'Email',
-    emailPlaceholder: 'email@email.com',
+    emailPlaceholder: "email{'@'}email.com",
     password: 'Mật khẩu',
     passwordPlaceholder: '••••••••',
     showPassword: 'Hiện mật khẩu',

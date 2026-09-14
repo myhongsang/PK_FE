@@ -15,7 +15,7 @@ export default {
     title: 'Login',
     subtitle: 'Enter your email and password to access your account.',
     email: 'Email',
-    emailPlaceholder: 'email@email.com',
+    emailPlaceholder: "email{'@'}email.com",
     password: 'Password',
     passwordPlaceholder: '••••••••',
     showPassword: 'Show password',
