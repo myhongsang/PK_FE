@@ -3,7 +3,7 @@ import { LoaderCircleIcon, RefreshCwIcon, TriangleAlertIcon } from '@lucide/vue'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 defineProps<{
   title: string
@@ -24,6 +24,9 @@ const emit = defineEmits<{
     <CardHeader>
       <CardTitle class="text-lg">{{ title }}</CardTitle>
       <CardDescription>{{ description }}</CardDescription>
+      <CardAction v-if="$slots.action">
+        <slot name="action" />
+      </CardAction>
     </CardHeader>
 
     <CardContent class="grid gap-4">

@@ -29,6 +29,11 @@ const router = createRouter({
           name: 'dashboard-products',
           component: () => import('@/views/ProductsView.vue'),
         },
+        {
+          path: 'categories',
+          name: 'dashboard-categories',
+          component: () => import('@/views/CategoriesView.vue'),
+        },
       ],
     },
     { path: '/', redirect: { name: 'dashboard' } },

@@ -6,6 +6,7 @@ export const API_ENDPOINTS = {
   },
   USERS: '/users',
   PRODUCTS: '/products',
+  CATEGORIES: '/categories',
 } as const
 
 export const TOKEN_STORAGE_KEY = 'access_token'
