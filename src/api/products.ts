@@ -1,12 +1,10 @@
-import api from './api'
+import api from '@/api/api'
+import i18n from '@/i18n'
+import { API_ENDPOINTS } from '@/constants/api'
+import { fetchRowsPage } from '@/api/search'
 
-export interface ProductItem {
-  id: number
-  name: string
-  description: string
-  price: number | string
-  stock: number
-}
+import type { PageResult } from '@/types/pagination'
+import type { ProductItem, ProductPayload } from '@/types/product'
 
 function mapProduct(raw: any): ProductItem {
   return {
@@ -15,20 +13,75 @@ function mapProduct(raw: any): ProductItem {
     description: raw?.description ?? raw?.desc ?? '—',
     price: raw?.price ?? '—',
     stock: raw?.stock ?? raw?.quantity ?? 0,
+    categoryId: raw?.categoryId ?? null,
   }
 }
 
-export async function getProducts(): Promise<ProductItem[]> {
+export async function getProducts(
+  search?: string,
+  page = 1,
+): Promise<PageResult<ProductItem>> {
   try {
-    const response = await api.get('/products')
-    const data = response.data
-    const rows = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []
+    const term = search?.trim() ?? ''
 
-    return rows.map(mapProduct)
+    const result = await fetchRowsPage<ProductItem>(
+      API_ENDPOINTS.PRODUCTS,
+      page,
+      term ? { q: term } : undefined,
+    )
+
+    return {
+      rows: result.rows.map(mapProduct),
+      meta: result.meta,
+    }
   } catch (error: any) {
     throw new Error(
       error.response?.data?.message ||
-      'Không thể tải danh sách sản phẩm. Vui lòng thử lại.'
+      i18n.global.t('products.loadFailed')
+    )
+  }
+}
+
+function unwrap(raw: any): any {
+  return raw?.data ?? raw ?? {}
+}
+
+export async function createProduct(payload: ProductPayload): Promise<ProductItem> {
+  try {
+    const response = await api.post(API_ENDPOINTS.PRODUCTS, payload)
+
+    return mapProduct(unwrap(response.data))
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message ||
+      i18n.global.t('products.createFailed')
+    )
+  }
+}
+
+export async function updateProduct(
+  id: ProductItem['id'],
+  payload: ProductPayload,
+): Promise<ProductItem> {
+  try {
+    const response = await api.patch(`${API_ENDPOINTS.PRODUCTS}/${id}`, payload)
+
+    return mapProduct(unwrap(response.data))
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message ||
+      i18n.global.t('products.updateFailed')
+    )
+  }
+}
+
+export async function deleteProduct(id: ProductItem['id']): Promise<void> {
+  try {
+    await api.delete(`${API_ENDPOINTS.PRODUCTS}/${id}`)
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message ||
+      i18n.global.t('products.deleteFailed')
     )
   }
 }
