@@ -34,6 +34,12 @@ const totalPages = ref(1)
 
 const categoryOptions = ref<CategoryItem[]>([])
 
+const filterCategoryId = ref('')
+const filterMinPrice = ref('')
+const filterMaxPrice = ref('')
+const debouncedMinPrice = refDebounced(filterMinPrice, 300)
+const debouncedMaxPrice = refDebounced(filterMaxPrice, 300)
+
 let searchSeq = 0
 let loadSeq = 0
 
@@ -50,6 +56,25 @@ const suggestions = computed<SearchSuggestion[]>(() => {
     .map(product => ({ label: product.name, detail: product.description }))
 })
 
+function currentFilters() {
+  const min = debouncedMinPrice.value.trim()
+  const max = debouncedMaxPrice.value.trim()
+  const minNumber = min === '' ? undefined : Number(min)
+  const maxNumber = max === '' ? undefined : Number(max)
+
+  return {
+    categoryId: filterCategoryId.value || undefined,
+    minPrice: minNumber !== undefined && Number.isFinite(minNumber) ? minNumber : undefined,
+    maxPrice: maxNumber !== undefined && Number.isFinite(maxNumber) ? maxNumber : undefined,
+  }
+}
+
+function clearFilters() {
+  filterCategoryId.value = ''
+  filterMinPrice.value = ''
+  filterMaxPrice.value = ''
+}
+
 async function runSearch(term: string) {
   const clean = term.trim()
   const seq = ++searchSeq
@@ -64,7 +89,7 @@ async function runSearch(term: string) {
   searchResults.value = []
 
   try {
-    const result = await getProducts(clean)
+    const result = await getProducts(clean, 1, currentFilters())
     if (seq === searchSeq)
       searchResults.value = result.rows
   }
@@ -238,7 +263,7 @@ async function loadData(showLoading = true) {
     for (let attempt = 0; attempt < 3; attempt++) {
       const page = currentPage.value
       const term = debouncedSearch.value
-      const result = await getProducts(term, page)
+      const result = await getProducts(term, page, currentFilters())
 
       if (seq !== loadSeq)
         return
@@ -284,6 +309,11 @@ watch(debouncedSearch, () => {
   void loadData(false)
 })
 
+watch([filterCategoryId, debouncedMinPrice, debouncedMaxPrice], () => {
+  currentPage.value = 1
+  void loadData(false)
+})
+
 async function loadCategoryOptions() {
   try {
     categoryOptions.value = await getAllCategories()
@@ -306,7 +336,7 @@ onMounted(() => {
     :loading="loading"
     :error-message="errorMessage"
     :is-empty="displayedProducts.length === 0"
-    :empty-text="debouncedSearch ? $t('products.noResults') : $t('products.empty')"
+    :empty-text="debouncedSearch || filterCategoryId || debouncedMinPrice || debouncedMaxPrice ? $t('products.noResults') : $t('products.empty')"
     @retry="loadData"
   >
     <template #action>
@@ -317,8 +347,54 @@ onMounted(() => {
     </template>
 
     <template #toolbar>
-      <div class="max-w-sm">
-        <SearchInput v-model="search" :placeholder="$t('products.searchPlaceholder')" :suggestions="suggestions" />
+      <div class="grid gap-3">
+        <div class="max-w-sm">
+          <SearchInput v-model="search" :placeholder="$t('products.searchPlaceholder')" :suggestions="suggestions" />
+        </div>
+
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="grid gap-1.5">
+            <Label for="filter-category" class="text-xs text-muted-foreground">{{ $t('products.category') }}</Label>
+            <select
+              id="filter-category"
+              v-model="filterCategoryId"
+              class="border-input dark:bg-input/30 flex h-9 w-48 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 md:text-sm"
+            >
+              <option value="">{{ $t('products.allCategories') }}</option>
+              <option v-for="category in categoryOptions" :key="String(category.id)" :value="String(category.id)">
+                {{ category.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="grid gap-1.5">
+            <Label for="filter-min-price" class="text-xs text-muted-foreground">{{ $t('products.priceFrom') }}</Label>
+            <Input
+              id="filter-min-price"
+              v-model="filterMinPrice"
+              type="number"
+              min="0"
+              class="w-32"
+              :placeholder="$t('products.priceMinPlaceholder')"
+            />
+          </div>
+
+          <div class="grid gap-1.5">
+            <Label for="filter-max-price" class="text-xs text-muted-foreground">{{ $t('products.priceTo') }}</Label>
+            <Input
+              id="filter-max-price"
+              v-model="filterMaxPrice"
+              type="number"
+              min="0"
+              class="w-32"
+              :placeholder="$t('products.priceMaxPlaceholder')"
+            />
+          </div>
+
+          <Button variant="outline" size="sm" class="text-muted-foreground" @click="clearFilters">
+            {{ $t('products.clearFilters') }}
+          </Button>
+        </div>
       </div>
     </template>
 

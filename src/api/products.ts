@@ -17,17 +17,37 @@ function mapProduct(raw: any): ProductItem {
   }
 }
 
+export interface ProductFilters {
+  categoryId?: string
+  minPrice?: number
+  maxPrice?: number
+}
+
 export async function getProducts(
   search?: string,
   page = 1,
+  filters: ProductFilters = {},
 ): Promise<PageResult<ProductItem>> {
   try {
     const term = search?.trim() ?? ''
+    const params: Record<string, string | number | undefined> = {}
+
+    if (term)
+      params.q = term
+
+    if (filters.categoryId)
+      params.categoryId = filters.categoryId
+
+    if (filters.minPrice !== undefined)
+      params.minPrice = filters.minPrice
+
+    if (filters.maxPrice !== undefined)
+      params.maxPrice = filters.maxPrice
 
     const result = await fetchRowsPage<ProductItem>(
       API_ENDPOINTS.PRODUCTS,
       page,
-      term ? { q: term } : undefined,
+      params,
     )
 
     return {
