@@ -30,8 +30,8 @@ function formatPrice(price: number | string) {
     <TableHeader>
       <TableRow>
         <TableHead class="w-16">{{ t('products.columns.id') }}</TableHead>
-        <TableHead>{{ t('products.columns.name') }}</TableHead>
-        <TableHead>{{ t('products.columns.description') }}</TableHead>
+        <TableHead class="max-w-[200px]">{{ t('products.columns.name') }}</TableHead>
+        <TableHead class="max-w-[280px]">{{ t('products.columns.description') }}</TableHead>
         <TableHead class="text-right">{{ t('products.columns.price') }}</TableHead>
         <TableHead class="text-center">{{ t('products.columns.stock') }}</TableHead>
         <TableHead class="w-28 text-right">{{ t('products.columns.actions') }}</TableHead>
@@ -40,8 +40,8 @@ function formatPrice(price: number | string) {
     <TableBody>
       <TableRow v-for="item in products" :key="item.id">
         <TableCell class="text-muted-foreground">{{ item.id }}</TableCell>
-        <TableCell class="font-medium">{{ item.name }}</TableCell>
-        <TableCell class="text-muted-foreground">{{ item.description }}</TableCell>
+        <TableCell class="max-w-[200px] whitespace-normal break-words font-medium">{{ item.name }}</TableCell>
+        <TableCell class="max-w-[280px] whitespace-normal break-words text-muted-foreground">{{ item.description }}</TableCell>
         <TableCell class="text-right">{{ formatPrice(item.price) }}</TableCell>
         <TableCell class="text-center">{{ item.stock }}</TableCell>
         <TableCell>
