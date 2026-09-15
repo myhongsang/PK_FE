@@ -19,7 +19,8 @@ export function extractRows(data: any): any[] {
 
 function totalPagesOf(data: any, headers: any): number | null {
   const hint =
-    data?.meta?.total_pages
+    data?.meta?.totalPages
+    ?? data?.meta?.total_pages
     ?? data?.meta?.last_page
     ?? data?.total_pages
     ?? data?.last_page
@@ -60,6 +61,7 @@ function totalOf(data: any, headers: any): number | null {
 function perPageOf(data: any): number {
   const hint =
     data?.meta?.per_page
+    ?? data?.meta?.limit
     ?? data?.per_page
     ?? data?.page_size
     ?? data?.limit
@@ -75,8 +77,10 @@ function pageMetaOf(data: any, headers: any, requestedPage: number): PageMeta {
     totalPagesOf(data, headers)
     ?? (total !== null ? Math.ceil(total / PAGE_SIZE) : Math.max(1, requestedPage))
 
+  const page = typeof data?.meta?.page === 'number' ? data.meta.page : requestedPage
+
   return {
-    currentPage: requestedPage,
+    currentPage: page,
     perPage: perPageOf(data),
     total,
     totalPages,
@@ -92,7 +96,7 @@ export async function fetchRowsPage<T = any>(
     params: {
       ...(params ?? {}),
       page,
-      per_page: PAGE_SIZE,
+      limit: PAGE_SIZE,
     },
   })
 
