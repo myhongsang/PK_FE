@@ -1,10 +1,9 @@
-import api from './api'
+import i18n from '@/i18n'
+import { API_ENDPOINTS } from '@/constants/api'
+import { fetchRowsPage } from '@/api/search'
 
-export interface UserItem {
-  id: number
-  name: string
-  email: string
-}
+import type { PageResult } from '@/types/pagination'
+import type { UserItem } from '@/types/user'
 
 function mapUser(raw: any): UserItem {
   return {
@@ -14,17 +13,27 @@ function mapUser(raw: any): UserItem {
   }
 }
 
-export async function getUsers(): Promise<UserItem[]> {
+export async function getUsers(
+  search?: string,
+  page = 1,
+): Promise<PageResult<UserItem>> {
   try {
-    const response = await api.get('/users')
-    const data = response.data
-    const rows = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []
+    const term = search?.trim() ?? ''
 
-    return rows.map(mapUser)
+    const result = await fetchRowsPage<UserItem>(
+      API_ENDPOINTS.USERS,
+      page,
+      term ? { q: term } : undefined,
+    )
+
+    return {
+      rows: result.rows.map(mapUser),
+      meta: result.meta,
+    }
   } catch (error: any) {
     throw new Error(
       error.response?.data?.message ||
-      'Không thể tải danh sách người dùng. Vui lòng thử lại.'
+      i18n.global.t('users.loadFailed')
     )
   }
 }

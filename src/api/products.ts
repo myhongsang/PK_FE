@@ -1,12 +1,9 @@
-import api from './api'
+import i18n from '@/i18n'
+import { API_ENDPOINTS } from '@/constants/api'
+import { fetchRowsPage } from '@/api/search'
 
-export interface ProductItem {
-  id: number
-  name: string
-  description: string
-  price: number | string
-  stock: number
-}
+import type { PageResult } from '@/types/pagination'
+import type { ProductItem } from '@/types/product'
 
 function mapProduct(raw: any): ProductItem {
   return {
@@ -18,17 +15,27 @@ function mapProduct(raw: any): ProductItem {
   }
 }
 
-export async function getProducts(): Promise<ProductItem[]> {
+export async function getProducts(
+  search?: string,
+  page = 1,
+): Promise<PageResult<ProductItem>> {
   try {
-    const response = await api.get('/products')
-    const data = response.data
-    const rows = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []
+    const term = search?.trim() ?? ''
 
-    return rows.map(mapProduct)
+    const result = await fetchRowsPage<ProductItem>(
+      API_ENDPOINTS.PRODUCTS,
+      page,
+      term ? { q: term } : undefined,
+    )
+
+    return {
+      rows: result.rows.map(mapProduct),
+      meta: result.meta,
+    }
   } catch (error: any) {
     throw new Error(
       error.response?.data?.message ||
-      'Không thể tải danh sách sản phẩm. Vui lòng thử lại.'
+      i18n.global.t('products.loadFailed')
     )
   }
 }
