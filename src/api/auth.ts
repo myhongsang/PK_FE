@@ -25,8 +25,8 @@ export async function login(
       },
     }
 
-    localStorage.setItem(TOKEN_STORAGE_KEY, result.accessToken)
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(result.user))
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, result.accessToken)
+    sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(result.user))
 
     verifiedSession = result
 
@@ -41,14 +41,14 @@ export async function login(
 
 export function signOut(): void {
   verifiedSession = null
-  localStorage.removeItem(TOKEN_STORAGE_KEY)
-  localStorage.removeItem(USER_STORAGE_KEY)
+  sessionStorage.removeItem(TOKEN_STORAGE_KEY)
+  sessionStorage.removeItem(USER_STORAGE_KEY)
 }
 
 export function getStoredSession(): LoginResult | null {
   try {
-    const accessToken = localStorage.getItem(TOKEN_STORAGE_KEY)
-    const rawUser = localStorage.getItem(USER_STORAGE_KEY)
+    const accessToken = sessionStorage.getItem(TOKEN_STORAGE_KEY)
+    const rawUser = sessionStorage.getItem(USER_STORAGE_KEY)
 
     if (!accessToken || !rawUser)
       return null
@@ -65,8 +65,8 @@ export function getStoredSession(): LoginResult | null {
     }
   }
   catch {
-    localStorage.removeItem(TOKEN_STORAGE_KEY)
-    localStorage.removeItem(USER_STORAGE_KEY)
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY)
+    sessionStorage.removeItem(USER_STORAGE_KEY)
     return null
   }
 }

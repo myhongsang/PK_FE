@@ -10,7 +10,7 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY)
+  const token = sessionStorage.getItem(TOKEN_STORAGE_KEY)
   if (token)
     config.headers.Authorization = `Bearer ${token}`
 
@@ -24,8 +24,8 @@ api.interceptors.response.use(
       error.response?.status === 401
       && error.config?.url !== API_ENDPOINTS.AUTH.LOGIN
     ) {
-      localStorage.removeItem(TOKEN_STORAGE_KEY)
-      localStorage.removeItem(USER_STORAGE_KEY)
+      sessionStorage.removeItem(TOKEN_STORAGE_KEY)
+      sessionStorage.removeItem(USER_STORAGE_KEY)
       window.location.reload()
     }
 
