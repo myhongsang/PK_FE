@@ -1,7 +1,8 @@
 import api from '@/api/api'
 
-export const SEARCH_PAGE_SIZE = 100
-const MAX_SEARCH_PAGES = 20
+import type { PageMeta, PageResult } from '@/types/pagination'
+
+export const PAGE_SIZE = 25
 
 export function extractRows(data: any): any[] {
   if (Array.isArray(data))
@@ -35,46 +36,68 @@ function totalPagesOf(data: any, headers: any): number | null {
   return null
 }
 
-export async function fetchAllRows(
-  path: string,
-  params?: Record<string, string | number | undefined>,
-): Promise<any[]> {
-  const rows: any[] = []
-  const seen = new Set<string>()
+function totalOf(data: any, headers: any): number | null {
+  const hint =
+    data?.meta?.total
+    ?? data?.total
+    ?? data?.total_count
+    ?? data?.count
 
-  for (let page = 1; page <= MAX_SEARCH_PAGES; page++) {
-    const response = await api.get(path, {
-      params: {
-        ...(params ?? {}),
-        page,
-        per_page: SEARCH_PAGE_SIZE,
-      },
-    })
+  const parsed = Number(hint)
 
-    const current = extractRows(response.data)
-    if (current.length === 0)
-      break
+  if (Number.isFinite(parsed) && parsed >= 0)
+    return parsed
 
-    let newCount = 0
+  const headerHint = headers?.['x-total-count'] ?? headers?.['x-total']
+  const headerParsed = Number(headerHint)
 
-    for (const row of current) {
-      const key = String(row?.id ?? JSON.stringify(row))
+  if (Number.isFinite(headerParsed) && headerParsed >= 0)
+    return headerParsed
 
-      if (!seen.has(key)) {
-        seen.add(key)
-        rows.push(row)
-        newCount++
-      }
-    }
+  return null
+}
 
-    const totalPages = totalPagesOf(response.data, response.headers)
+function perPageOf(data: any): number {
+  const hint =
+    data?.meta?.per_page
+    ?? data?.per_page
+    ?? data?.page_size
+    ?? data?.limit
 
-    if (totalPages !== null && page >= totalPages)
-      break
+  const parsed = Number(hint)
 
-    if (page > 1 && (current.length < SEARCH_PAGE_SIZE || newCount === 0))
-      break
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : PAGE_SIZE
+}
+
+function pageMetaOf(data: any, headers: any, requestedPage: number): PageMeta {
+  const total = totalOf(data, headers)
+  const totalPages =
+    totalPagesOf(data, headers)
+    ?? (total !== null ? Math.ceil(total / PAGE_SIZE) : Math.max(1, requestedPage))
+
+  return {
+    currentPage: requestedPage,
+    perPage: perPageOf(data),
+    total,
+    totalPages,
   }
+}
 
-  return rows
+export async function fetchRowsPage<T = any>(
+  path: string,
+  page: number,
+  params?: Record<string, string | number | undefined>,
+): Promise<PageResult<T>> {
+  const response = await api.get(path, {
+    params: {
+      ...(params ?? {}),
+      page,
+      per_page: PAGE_SIZE,
+    },
+  })
+
+  return {
+    rows: extractRows(response.data) as T[],
+    meta: pageMetaOf(response.data, response.headers, page),
+  }
 }

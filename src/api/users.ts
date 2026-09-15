@@ -1,8 +1,8 @@
-import api from '@/api/api'
 import i18n from '@/i18n'
 import { API_ENDPOINTS } from '@/constants/api'
-import { extractRows, fetchAllRows } from '@/api/search'
+import { fetchRowsPage } from '@/api/search'
 
+import type { PageResult } from '@/types/pagination'
 import type { UserItem } from '@/types/user'
 
 function mapUser(raw: any): UserItem {
@@ -13,17 +13,23 @@ function mapUser(raw: any): UserItem {
   }
 }
 
-export async function getUsers(search?: string): Promise<UserItem[]> {
+export async function getUsers(
+  search?: string,
+  page = 1,
+): Promise<PageResult<UserItem>> {
   try {
     const term = search?.trim() ?? ''
 
-    const response = term
-      ? await fetchAllRows(API_ENDPOINTS.USERS, { q: term })
-      : await api.get(API_ENDPOINTS.USERS)
+    const result = await fetchRowsPage<UserItem>(
+      API_ENDPOINTS.USERS,
+      page,
+      term ? { q: term } : undefined,
+    )
 
-    const rows = Array.isArray(response) ? response : extractRows(response.data)
-
-    return rows.map(mapUser)
+    return {
+      rows: result.rows.map(mapUser),
+      meta: result.meta,
+    }
   } catch (error: any) {
     throw new Error(
       error.response?.data?.message ||

@@ -7,8 +7,9 @@ import { getProducts } from '@/api/products'
 import SearchInput from '@/components/SearchInput.vue'
 import ProductsTable from '@/components/ProductsTable.vue'
 import ListCard from '@/components/ListCard.vue'
+import { Pagination } from '@/components/ui/pagination'
 import { counts } from '@/stores/counts'
-import { matchesSearch, type SearchSuggestion } from '@/lib/search'
+import type { SearchSuggestion } from '@/lib/search'
 import type { ProductItem } from '@/types/product'
 
 const { t } = useI18n()
@@ -21,20 +22,13 @@ const search = ref('')
 const debouncedSearch = refDebounced(search, 300)
 const searchResults = ref<ProductItem[]>([])
 
+const currentPage = ref(1)
+const totalPages = ref(1)
+
 let searchSeq = 0
+let loadSeq = 0
 
-const displayedProducts = computed(() => {
-  const term = debouncedSearch.value.trim()
-
-  if (!term)
-    return products.value
-
-  const base = searchResults.value.length > 0 ? searchResults.value : products.value
-
-  return base.filter(product =>
-    matchesSearch(product.name, term)
-    || matchesSearch(product.description, term))
-})
+const displayedProducts = computed(() => products.value)
 
 const suggestions = computed<SearchSuggestion[]>(() => {
   const term = search.value.trim()
@@ -61,9 +55,9 @@ async function runSearch(term: string) {
   searchResults.value = []
 
   try {
-    const rows = await getProducts(clean)
+    const result = await getProducts(clean)
     if (seq === searchSeq)
-      searchResults.value = rows
+      searchResults.value = result.rows
   }
   catch (error) {
     if (seq === searchSeq) {
@@ -81,7 +75,11 @@ async function runSearch(term: string) {
 watchDebounced(search, (value) => { void runSearch(value) }, { debounce: 300 })
 
 const description = computed(() =>
-  t('common.showing', { count: displayedProducts.value.length }),
+  t('common.showingPage', {
+    page: currentPage.value,
+    totalPages: totalPages.value,
+    count: displayedProducts.value.length,
+  }),
 )
 
 async function loadData(showLoading = true) {
@@ -89,23 +87,55 @@ async function loadData(showLoading = true) {
     loading.value = true
   errorMessage.value = ''
 
-  try {
-    products.value = await getProducts(debouncedSearch.value)
+  const seq = ++loadSeq
 
-    if (!debouncedSearch.value)
-      counts.products = products.value.length
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const page = currentPage.value
+      const term = debouncedSearch.value
+      const result = await getProducts(term, page)
+
+      if (seq !== loadSeq)
+        return
+
+      if (page > result.meta.totalPages) {
+        currentPage.value = Math.max(1, result.meta.totalPages)
+        continue
+      }
+
+      products.value = result.rows
+      totalPages.value = result.meta.totalPages
+
+      if (!term)
+        counts.products = result.meta.total ?? result.rows.length
+
+      return
+    }
   }
   catch (error) {
+    if (seq !== loadSeq)
+      return
+
     errorMessage.value = error instanceof Error
       ? error.message
       : t('common.unableToLoad')
   }
   finally {
-    loading.value = false
+    if (seq === loadSeq)
+      loading.value = false
   }
 }
 
+function goToPage(page: number) {
+  if (page < 1 || page > totalPages.value || page === currentPage.value)
+    return
+
+  currentPage.value = page
+  void loadData(false)
+}
+
 watch(debouncedSearch, () => {
+  currentPage.value = 1
   void loadData(false)
 })
 
@@ -129,5 +159,12 @@ onMounted(() => loadData())
     </template>
 
     <ProductsTable :products="displayedProducts" />
+
+    <Pagination
+      :current-page="currentPage"
+      :total-pages="totalPages"
+      :disabled="loading"
+      @update:current-page="goToPage"
+    />
   </ListCard>
 </template>
