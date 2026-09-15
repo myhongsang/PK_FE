@@ -8,8 +8,9 @@ import { createCategory, deleteCategory, getCategories, updateCategory } from '@
 import CategoriesTable from '@/components/CategoriesTable.vue'
 import SearchInput from '@/components/SearchInput.vue'
 import ListCard from '@/components/ListCard.vue'
+import { Pagination } from '@/components/ui/pagination'
 import { counts } from '@/stores/counts'
-import { matchesSearch, type SearchSuggestion } from '@/lib/search'
+import type { SearchSuggestion } from '@/lib/search'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -26,20 +27,13 @@ const search = ref('')
 const debouncedSearch = refDebounced(search, 300)
 const searchResults = ref<CategoryItem[]>([])
 
+const currentPage = ref(1)
+const totalPages = ref(1)
+
 let searchSeq = 0
+let loadSeq = 0
 
-const displayedCategories = computed(() => {
-  const term = debouncedSearch.value.trim()
-
-  if (!term)
-    return categories.value
-
-  const base = searchResults.value.length > 0 ? searchResults.value : categories.value
-
-  return base.filter(category =>
-    matchesSearch(category.name, term)
-    || matchesSearch(category.description, term))
-})
+const displayedCategories = computed(() => categories.value)
 
 const suggestions = computed<SearchSuggestion[]>(() => {
   const term = search.value.trim()
@@ -66,9 +60,9 @@ async function runSearch(term: string) {
   searchResults.value = []
 
   try {
-    const rows = await getCategories(clean)
+    const result = await getCategories(clean)
     if (seq === searchSeq)
-      searchResults.value = rows
+      searchResults.value = result.rows
   }
   catch (error) {
     if (seq === searchSeq) {
@@ -86,7 +80,11 @@ async function runSearch(term: string) {
 watchDebounced(search, (value) => { void runSearch(value) }, { debounce: 300 })
 
 const description = computed(() =>
-  t('categories.showing', { count: displayedCategories.value.length }),
+  t('common.showingPage', {
+    page: currentPage.value,
+    totalPages: totalPages.value,
+    count: displayedCategories.value.length,
+  }),
 )
 
 const formOpen = ref(false)
@@ -198,24 +196,19 @@ async function loadData(showLoading = true) {
     loading.value = true
   errorMessage.value = ''
 
+  const seq = ++loadSeq
+
   try {
-    categories.value = await getCategories(debouncedSearch.value)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const page = currentPage.value
+      const term = debouncedSearch.value
+      const result = await getCategories(term, page)
 
       if (seq !== loadSeq)
         return
 
-      if (result.meta.totalPages < 1) {
-        categories.value = []
-        totalPages.value = 1
-
-        if (!term)
-          counts.categories = result.meta.total ?? 0
-
-        return
-      }
-
       if (page > result.meta.totalPages) {
-        currentPage.value = result.meta.totalPages
+        currentPage.value = Math.max(1, result.meta.totalPages)
         continue
       }
 
@@ -229,16 +222,29 @@ async function loadData(showLoading = true) {
     }
   }
   catch (error) {
+    if (seq !== loadSeq)
+      return
+
     errorMessage.value = error instanceof Error
       ? error.message
       : t('common.unableToLoad')
   }
   finally {
-    loading.value = false
+    if (seq === loadSeq)
+      loading.value = false
   }
 }
 
+function goToPage(page: number) {
+  if (page < 1 || page > totalPages.value || page === currentPage.value)
+    return
+
+  currentPage.value = page
+  void loadData(false)
+}
+
 watch(debouncedSearch, () => {
+  currentPage.value = 1
   void loadData(false)
 })
 
@@ -272,6 +278,13 @@ onMounted(() => loadData())
       :categories="displayedCategories"
       @edit="openEdit"
       @remove="openDelete"
+    />
+
+    <Pagination
+      :current-page="currentPage"
+      :total-pages="totalPages"
+      :disabled="loading"
+      @update:current-page="goToPage"
     />
   </ListCard>
 

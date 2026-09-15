@@ -1,7 +1,8 @@
 import api from '@/api/api'
 
-export const SEARCH_PAGE_SIZE = 100
-const MAX_SEARCH_PAGES = 20
+import type { PageMeta, PageResult } from '@/types/pagination'
+
+export const PAGE_SIZE = 25
 
 export function extractRows(data: any): any[] {
   if (Array.isArray(data))
@@ -19,10 +20,8 @@ export function extractRows(data: any): any[] {
 function totalPagesOf(data: any, headers: any): number | null {
   const hint =
     data?.meta?.total_pages
-    ?? data?.meta?.totalPages
-    ?? data?.total_pages
-    ?? data?.totalPages
     ?? data?.meta?.last_page
+    ?? data?.total_pages
     ?? data?.last_page
 
   if (typeof hint === 'number' && hint > 0)
@@ -37,7 +36,6 @@ function totalPagesOf(data: any, headers: any): number | null {
   return null
 }
 
-export async function fetchAllRows(
 function totalOf(data: any, headers: any): number | null {
   const hint =
     data?.meta?.total
@@ -62,7 +60,6 @@ function totalOf(data: any, headers: any): number | null {
 function perPageOf(data: any): number {
   const hint =
     data?.meta?.per_page
-    ?? data?.meta?.limit
     ?? data?.per_page
     ?? data?.page_size
     ?? data?.limit
@@ -88,52 +85,19 @@ function pageMetaOf(data: any, headers: any, requestedPage: number): PageMeta {
 
 export async function fetchRowsPage<T = any>(
   path: string,
+  page: number,
   params?: Record<string, string | number | undefined>,
-): Promise<any[]> {
-  const rows: any[] = []
-  const seen = new Set<string>()
 ): Promise<PageResult<T>> {
   const response = await api.get(path, {
     params: {
       ...(params ?? {}),
       page,
-      limit: PAGE_SIZE,
+      per_page: PAGE_SIZE,
     },
   })
 
-  for (let page = 1; page <= MAX_SEARCH_PAGES; page++) {
-    const response = await api.get(path, {
-      params: {
-        ...(params ?? {}),
-        page,
-        per_page: SEARCH_PAGE_SIZE,
-      },
-    })
-
-    const current = extractRows(response.data)
-    if (current.length === 0)
-      break
-
-    let newCount = 0
-
-    for (const row of current) {
-      const key = String(row?.id ?? JSON.stringify(row))
-
-      if (!seen.has(key)) {
-        seen.add(key)
-        rows.push(row)
-        newCount++
-      }
-    }
-
-    const totalPages = totalPagesOf(response.data, response.headers)
-
-    if (totalPages !== null && page >= totalPages)
-      break
-
-    if (page > 1 && (current.length < SEARCH_PAGE_SIZE || newCount === 0))
-      break
+  return {
+    rows: extractRows(response.data) as T[],
+    meta: pageMetaOf(response.data, response.headers, page),
   }
-
-  return rows
 }

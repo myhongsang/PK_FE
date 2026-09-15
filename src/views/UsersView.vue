@@ -7,8 +7,9 @@ import { getUsers } from '@/api/users'
 import SearchInput from '@/components/SearchInput.vue'
 import UsersTable from '@/components/UsersTable.vue'
 import ListCard from '@/components/ListCard.vue'
+import { Pagination } from '@/components/ui/pagination'
 import { counts } from '@/stores/counts'
-import { matchesSearch, type SearchSuggestion } from '@/lib/search'
+import type { SearchSuggestion } from '@/lib/search'
 import type { UserItem } from '@/types/user'
 
 const { t } = useI18n()
@@ -21,20 +22,13 @@ const search = ref('')
 const debouncedSearch = refDebounced(search, 300)
 const searchResults = ref<UserItem[]>([])
 
+const currentPage = ref(1)
+const totalPages = ref(1)
+
 let searchSeq = 0
+let loadSeq = 0
 
-const displayedUsers = computed(() => {
-  const term = debouncedSearch.value.trim()
-
-  if (!term)
-    return users.value
-
-  const base = searchResults.value.length > 0 ? searchResults.value : users.value
-
-  return base.filter(user =>
-    matchesSearch(user.name, term)
-    || matchesSearch(user.email, term))
-})
+const displayedUsers = computed(() => users.value)
 
 const suggestions = computed<SearchSuggestion[]>(() => {
   const term = search.value.trim()
@@ -61,9 +55,9 @@ async function runSearch(term: string) {
   searchResults.value = []
 
   try {
-    const rows = await getUsers(clean)
+    const result = await getUsers(clean)
     if (seq === searchSeq)
-      searchResults.value = rows
+      searchResults.value = result.rows
   }
   catch (error) {
     if (seq === searchSeq) {
@@ -81,7 +75,11 @@ async function runSearch(term: string) {
 watchDebounced(search, (value) => { void runSearch(value) }, { debounce: 300 })
 
 const description = computed(() =>
-  t('common.showing', { count: displayedUsers.value.length }),
+  t('common.showingPage', {
+    page: currentPage.value,
+    totalPages: totalPages.value,
+    count: displayedUsers.value.length,
+  }),
 )
 
 async function loadData(showLoading = true) {
@@ -89,24 +87,19 @@ async function loadData(showLoading = true) {
     loading.value = true
   errorMessage.value = ''
 
+  const seq = ++loadSeq
+
   try {
-    users.value = await getUsers(debouncedSearch.value)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const page = currentPage.value
+      const term = debouncedSearch.value
+      const result = await getUsers(term, page)
 
       if (seq !== loadSeq)
         return
 
-      if (result.meta.totalPages < 1) {
-        users.value = []
-        totalPages.value = 1
-
-        if (!term)
-          counts.users = result.meta.total ?? 0
-
-        return
-      }
-
       if (page > result.meta.totalPages) {
-        currentPage.value = result.meta.totalPages
+        currentPage.value = Math.max(1, result.meta.totalPages)
         continue
       }
 
@@ -120,16 +113,29 @@ async function loadData(showLoading = true) {
     }
   }
   catch (error) {
+    if (seq !== loadSeq)
+      return
+
     errorMessage.value = error instanceof Error
       ? error.message
       : t('common.unableToLoad')
   }
   finally {
-    loading.value = false
+    if (seq === loadSeq)
+      loading.value = false
   }
 }
 
+function goToPage(page: number) {
+  if (page < 1 || page > totalPages.value || page === currentPage.value)
+    return
+
+  currentPage.value = page
+  void loadData(false)
+}
+
 watch(debouncedSearch, () => {
+  currentPage.value = 1
   void loadData(false)
 })
 
@@ -153,5 +159,12 @@ onMounted(() => loadData())
     </template>
 
     <UsersTable :users="displayedUsers" />
+
+    <Pagination
+      :current-page="currentPage"
+      :total-pages="totalPages"
+      :disabled="loading"
+      @update:current-page="goToPage"
+    />
   </ListCard>
 </template>

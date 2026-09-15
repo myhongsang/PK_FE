@@ -12,6 +12,15 @@ export default {
     unableToLoad: 'Unable to load data. Please try again.',
     search: 'Search',
     clear: 'Clear search',
+    showingPage: 'Showing page {page} of {totalPages} · {count} records.',
+  },
+  pagination: {
+    label: 'Pagination',
+    first: 'Go to first page',
+    previous: 'Previous page',
+    next: 'Next page',
+    last: 'Go to last page',
+    page: 'Page {page}',
   },
   theme: {
     label: 'Theme',

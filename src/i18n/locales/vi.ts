@@ -12,6 +12,15 @@ export default {
     unableToLoad: 'Không thể tải dữ liệu. Vui lòng thử lại.',
     search: 'Tìm kiếm',
     clear: 'Xoá tìm kiếm',
+    showingPage: 'Đang hiển thị trang {page}/{totalPages} · {count} bản ghi.',
+  },
+  pagination: {
+    label: 'Điều hướng trang',
+    first: 'Về trang đầu',
+    previous: 'Trang trước',
+    next: 'Trang sau',
+    last: 'Về trang cuối',
+    page: 'Trang {page}',
   },
   theme: {
     label: 'Giao diện',
