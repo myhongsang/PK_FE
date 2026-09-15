@@ -1,16 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { refDebounced, watchDebounced } from '@vueuse/core'
+import { LoaderCircleIcon, PlusIcon } from '@lucide/vue'
 
-import { getProducts } from '@/api/products'
+import { createProduct, deleteProduct, getProducts, updateProduct } from '@/api/products'
 import SearchInput from '@/components/SearchInput.vue'
 import ProductsTable from '@/components/ProductsTable.vue'
 import ListCard from '@/components/ListCard.vue'
 import { Pagination } from '@/components/ui/pagination'
 import { counts } from '@/stores/counts'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import type { SearchSuggestion } from '@/lib/search'
-import type { ProductItem } from '@/types/product'
+import type { ProductItem, ProductPayload } from '@/types/product'
 
 const { t } = useI18n()
 
@@ -82,6 +87,136 @@ const description = computed(() =>
   }),
 )
 
+const formOpen = ref(false)
+const editing = ref<ProductItem | null>(null)
+const form = reactive({
+  name: '',
+  description: '',
+  price: '',
+  stock: '',
+})
+const fieldErrors = reactive<{ name?: string; price?: string; stock?: string }>({})
+const formError = ref('')
+const saving = ref(false)
+
+const dialogTitle = computed(() =>
+  editing.value ? t('products.editTitle') : t('products.createTitle'),
+)
+
+function openCreate() {
+  editing.value = null
+  form.name = ''
+  form.description = ''
+  form.price = ''
+  form.stock = ''
+  fieldErrors.name = undefined
+  fieldErrors.price = undefined
+  fieldErrors.stock = undefined
+  formError.value = ''
+  formOpen.value = true
+}
+
+function openEdit(product: ProductItem) {
+  editing.value = product
+  form.name = product.name === '—' ? '' : product.name
+  form.description = product.description === '—' ? '' : product.description
+  form.price = product.price === '—' ? '' : String(product.price)
+  form.stock = String(product.stock)
+  fieldErrors.name = undefined
+  fieldErrors.price = undefined
+  fieldErrors.stock = undefined
+  formError.value = ''
+  formOpen.value = true
+}
+
+function validate(): boolean {
+  fieldErrors.name = undefined
+  fieldErrors.price = undefined
+  fieldErrors.stock = undefined
+
+  if (!form.name.trim())
+    fieldErrors.name = t('products.nameRequired')
+
+  const price = form.price.trim()
+  if (price && !/^\d+(\.\d+)?$/.test(price))
+    fieldErrors.price = t('products.priceInvalid')
+
+  const stock = form.stock.trim()
+  if (stock && !/^\d+$/.test(stock))
+    fieldErrors.stock = t('products.stockInvalid')
+
+  return !fieldErrors.name && !fieldErrors.price && !fieldErrors.stock
+}
+
+async function onSubmit() {
+  formError.value = ''
+
+  if (!validate())
+    return
+
+  saving.value = true
+  try {
+    const payload: ProductPayload = {
+      name: form.name.trim(),
+      description: form.description.trim(),
+    }
+
+    if (form.price.trim())
+      payload.price = Number(form.price.trim())
+
+    if (form.stock.trim())
+      payload.stock = Number.parseInt(form.stock.trim(), 10)
+
+    if (editing.value)
+      await updateProduct(editing.value.id, payload)
+    else
+      await createProduct(payload)
+
+    formOpen.value = false
+    await loadData()
+  }
+  catch (error) {
+    formError.value = error instanceof Error
+      ? error.message
+      : t('common.genericError')
+  }
+  finally {
+    saving.value = false
+  }
+}
+
+const deleteOpen = ref(false)
+const deleting = ref<ProductItem | null>(null)
+const deletingBusy = ref(false)
+const deleteError = ref('')
+
+function openDelete(product: ProductItem) {
+  deleting.value = product
+  deleteError.value = ''
+  deleteOpen.value = true
+}
+
+async function onConfirmDelete() {
+  if (!deleting.value)
+    return
+
+  deletingBusy.value = true
+  deleteError.value = ''
+  try {
+    await deleteProduct(deleting.value.id)
+    deleteOpen.value = false
+    await loadData()
+  }
+  catch (error) {
+    deleteError.value = error instanceof Error
+      ? error.message
+      : t('common.genericError')
+  }
+  finally {
+    deletingBusy.value = false
+  }
+}
+
 async function loadData(showLoading = true) {
   if (showLoading)
     loading.value = true
@@ -152,13 +287,24 @@ onMounted(() => loadData())
     :empty-text="debouncedSearch ? $t('products.noResults') : $t('products.empty')"
     @retry="loadData"
   >
+    <template #action>
+      <Button @click="openCreate">
+        <PlusIcon aria-hidden="true" />
+        {{ $t('products.add') }}
+      </Button>
+    </template>
+
     <template #toolbar>
       <div class="max-w-sm">
         <SearchInput v-model="search" :placeholder="$t('products.searchPlaceholder')" :suggestions="suggestions" />
       </div>
     </template>
 
-    <ProductsTable :products="displayedProducts" />
+    <ProductsTable
+      :products="displayedProducts"
+      @edit="openEdit"
+      @remove="openDelete"
+    />
 
     <Pagination
       :current-page="currentPage"
@@ -167,4 +313,116 @@ onMounted(() => loadData())
       @update:current-page="goToPage"
     />
   </ListCard>
+
+  <Dialog v-model:open="formOpen">
+    <DialogContent class="sm:max-w-md">
+      <DialogHeader>
+        <DialogTitle>{{ dialogTitle }}</DialogTitle>
+        <DialogDescription>
+          {{ editing ? $t('products.editDescription') : $t('products.createDescription') }}
+        </DialogDescription>
+      </DialogHeader>
+
+      <form class="grid gap-4" novalidate @submit.prevent="onSubmit">
+        <div class="grid gap-2">
+          <Label for="product-name">{{ $t('products.name') }}</Label>
+          <Input
+            id="product-name"
+            v-model="form.name"
+            :placeholder="$t('products.namePlaceholder')"
+            :aria-invalid="fieldErrors.name ? true : undefined"
+            :disabled="saving"
+          />
+          <p v-if="fieldErrors.name" class="text-xs text-destructive" role="alert">
+            {{ fieldErrors.name }}
+          </p>
+        </div>
+
+        <div class="grid gap-2">
+          <Label for="product-description">{{ $t('products.description') }}</Label>
+          <Input
+            id="product-description"
+            v-model="form.description"
+            :placeholder="$t('products.descriptionPlaceholder')"
+            :disabled="saving"
+          />
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="grid gap-2">
+            <Label for="product-price">{{ $t('products.price') }}</Label>
+            <Input
+              id="product-price"
+              v-model="form.price"
+              type="number"
+              min="0"
+              step="0.01"
+              :placeholder="$t('products.pricePlaceholder')"
+              :aria-invalid="fieldErrors.price ? true : undefined"
+              :disabled="saving"
+            />
+            <p v-if="fieldErrors.price" class="text-xs text-destructive" role="alert">
+              {{ fieldErrors.price }}
+            </p>
+          </div>
+
+          <div class="grid gap-2">
+            <Label for="product-stock">{{ $t('products.stock') }}</Label>
+            <Input
+              id="product-stock"
+              v-model="form.stock"
+              type="number"
+              min="0"
+              step="1"
+              :placeholder="$t('products.stockPlaceholder')"
+              :aria-invalid="fieldErrors.stock ? true : undefined"
+              :disabled="saving"
+            />
+            <p v-if="fieldErrors.stock" class="text-xs text-destructive" role="alert">
+              {{ fieldErrors.stock }}
+            </p>
+          </div>
+        </div>
+
+        <p v-if="formError" class="text-xs text-destructive" role="alert">
+          {{ formError }}
+        </p>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" :disabled="saving" @click="formOpen = false">
+            {{ $t('common.cancel') }}
+          </Button>
+          <Button type="submit" :disabled="saving">
+            <LoaderCircleIcon v-if="saving" class="animate-spin" aria-hidden="true" />
+            {{ editing ? $t('common.save') : $t('products.add') }}
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>
+
+  <Dialog v-model:open="deleteOpen">
+    <DialogContent class="sm:max-w-sm">
+      <DialogHeader>
+        <DialogTitle>{{ $t('products.deleteTitle') }}</DialogTitle>
+        <DialogDescription>
+          {{ $t('products.deleteDescription', { name: deleting?.name }) }}
+        </DialogDescription>
+      </DialogHeader>
+
+      <p v-if="deleteError" class="text-xs text-destructive" role="alert">
+        {{ deleteError }}
+      </p>
+
+      <DialogFooter>
+        <Button variant="outline" :disabled="deletingBusy" @click="deleteOpen = false">
+          {{ $t('common.cancel') }}
+        </Button>
+        <Button variant="destructive" :disabled="deletingBusy" @click="onConfirmDelete">
+          <LoaderCircleIcon v-if="deletingBusy" class="animate-spin" aria-hidden="true" />
+          {{ $t('common.delete') }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>

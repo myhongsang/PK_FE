@@ -1,9 +1,10 @@
+import api from '@/api/api'
 import i18n from '@/i18n'
 import { API_ENDPOINTS } from '@/constants/api'
 import { fetchRowsPage } from '@/api/search'
 
 import type { PageResult } from '@/types/pagination'
-import type { ProductItem } from '@/types/product'
+import type { ProductItem, ProductPayload } from '@/types/product'
 
 function mapProduct(raw: any): ProductItem {
   return {
@@ -36,6 +37,50 @@ export async function getProducts(
     throw new Error(
       error.response?.data?.message ||
       i18n.global.t('products.loadFailed')
+    )
+  }
+}
+
+function unwrap(raw: any): any {
+  return raw?.data ?? raw ?? {}
+}
+
+export async function createProduct(payload: ProductPayload): Promise<ProductItem> {
+  try {
+    const response = await api.post(API_ENDPOINTS.PRODUCTS, payload)
+
+    return mapProduct(unwrap(response.data))
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message ||
+      i18n.global.t('products.createFailed')
+    )
+  }
+}
+
+export async function updateProduct(
+  id: ProductItem['id'],
+  payload: ProductPayload,
+): Promise<ProductItem> {
+  try {
+    const response = await api.patch(`${API_ENDPOINTS.PRODUCTS}/${id}`, payload)
+
+    return mapProduct(unwrap(response.data))
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message ||
+      i18n.global.t('products.updateFailed')
+    )
+  }
+}
+
+export async function deleteProduct(id: ProductItem['id']): Promise<void> {
+  try {
+    await api.delete(`${API_ENDPOINTS.PRODUCTS}/${id}`)
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message ||
+      i18n.global.t('products.deleteFailed')
     )
   }
 }
