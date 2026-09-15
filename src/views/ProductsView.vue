@@ -94,6 +94,32 @@ async function loadData(showLoading = true) {
 
     if (!debouncedSearch.value)
       counts.products = products.value.length
+      if (seq !== loadSeq)
+        return
+
+      if (result.meta.totalPages < 1) {
+        products.value = []
+        totalPages.value = 1
+
+        if (!term)
+          counts.products = result.meta.total ?? 0
+
+        return
+      }
+
+      if (page > result.meta.totalPages) {
+        currentPage.value = result.meta.totalPages
+        continue
+      }
+
+      products.value = result.rows
+      totalPages.value = result.meta.totalPages
+
+      if (!term)
+        counts.products = result.meta.total ?? result.rows.length
+
+      return
+    }
   }
   catch (error) {
     errorMessage.value = error instanceof Error

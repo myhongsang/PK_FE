@@ -92,8 +92,32 @@ async function loadData(showLoading = true) {
   try {
     users.value = await getUsers(debouncedSearch.value)
 
-    if (!debouncedSearch.value)
-      counts.users = users.value.length
+      if (seq !== loadSeq)
+        return
+
+      if (result.meta.totalPages < 1) {
+        users.value = []
+        totalPages.value = 1
+
+        if (!term)
+          counts.users = result.meta.total ?? 0
+
+        return
+      }
+
+      if (page > result.meta.totalPages) {
+        currentPage.value = result.meta.totalPages
+        continue
+      }
+
+      users.value = result.rows
+      totalPages.value = result.meta.totalPages
+
+      if (!term)
+        counts.users = result.meta.total ?? result.rows.length
+
+      return
+    }
   }
   catch (error) {
     errorMessage.value = error instanceof Error

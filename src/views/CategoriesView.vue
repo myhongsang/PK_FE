@@ -201,8 +201,32 @@ async function loadData(showLoading = true) {
   try {
     categories.value = await getCategories(debouncedSearch.value)
 
-    if (!debouncedSearch.value)
-      counts.categories = categories.value.length
+      if (seq !== loadSeq)
+        return
+
+      if (result.meta.totalPages < 1) {
+        categories.value = []
+        totalPages.value = 1
+
+        if (!term)
+          counts.categories = result.meta.total ?? 0
+
+        return
+      }
+
+      if (page > result.meta.totalPages) {
+        currentPage.value = result.meta.totalPages
+        continue
+      }
+
+      categories.value = result.rows
+      totalPages.value = result.meta.totalPages
+
+      if (!term)
+        counts.categories = result.meta.total ?? result.rows.length
+
+      return
+    }
   }
   catch (error) {
     errorMessage.value = error instanceof Error

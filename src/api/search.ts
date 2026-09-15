@@ -19,8 +19,10 @@ export function extractRows(data: any): any[] {
 function totalPagesOf(data: any, headers: any): number | null {
   const hint =
     data?.meta?.total_pages
-    ?? data?.meta?.last_page
+    ?? data?.meta?.totalPages
     ?? data?.total_pages
+    ?? data?.totalPages
+    ?? data?.meta?.last_page
     ?? data?.last_page
 
   if (typeof hint === 'number' && hint > 0)
@@ -36,11 +38,68 @@ function totalPagesOf(data: any, headers: any): number | null {
 }
 
 export async function fetchAllRows(
+function totalOf(data: any, headers: any): number | null {
+  const hint =
+    data?.meta?.total
+    ?? data?.total
+    ?? data?.total_count
+    ?? data?.count
+
+  const parsed = Number(hint)
+
+  if (Number.isFinite(parsed) && parsed >= 0)
+    return parsed
+
+  const headerHint = headers?.['x-total-count'] ?? headers?.['x-total']
+  const headerParsed = Number(headerHint)
+
+  if (Number.isFinite(headerParsed) && headerParsed >= 0)
+    return headerParsed
+
+  return null
+}
+
+function perPageOf(data: any): number {
+  const hint =
+    data?.meta?.per_page
+    ?? data?.meta?.limit
+    ?? data?.per_page
+    ?? data?.page_size
+    ?? data?.limit
+
+  const parsed = Number(hint)
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : PAGE_SIZE
+}
+
+function pageMetaOf(data: any, headers: any, requestedPage: number): PageMeta {
+  const total = totalOf(data, headers)
+  const totalPages =
+    totalPagesOf(data, headers)
+    ?? (total !== null ? Math.ceil(total / PAGE_SIZE) : Math.max(1, requestedPage))
+
+  return {
+    currentPage: requestedPage,
+    perPage: perPageOf(data),
+    total,
+    totalPages,
+  }
+}
+
+export async function fetchRowsPage<T = any>(
   path: string,
   params?: Record<string, string | number | undefined>,
 ): Promise<any[]> {
   const rows: any[] = []
   const seen = new Set<string>()
+): Promise<PageResult<T>> {
+  const response = await api.get(path, {
+    params: {
+      ...(params ?? {}),
+      page,
+      limit: PAGE_SIZE,
+    },
+  })
 
   for (let page = 1; page <= MAX_SEARCH_PAGES; page++) {
     const response = await api.get(path, {
