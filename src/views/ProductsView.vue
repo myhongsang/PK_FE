@@ -5,6 +5,7 @@ import { refDebounced, watchDebounced } from '@vueuse/core'
 import { LoaderCircleIcon, PlusIcon } from '@lucide/vue'
 
 import { createProduct, deleteProduct, getProducts, updateProduct } from '@/api/products'
+import { getAllCategories } from '@/api/categories'
 import SearchInput from '@/components/SearchInput.vue'
 import ProductsTable from '@/components/ProductsTable.vue'
 import ListCard from '@/components/ListCard.vue'
@@ -14,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import type { CategoryItem } from '@/types/category'
 import type { SearchSuggestion } from '@/lib/search'
 import type { ProductItem, ProductPayload } from '@/types/product'
 
@@ -29,6 +31,8 @@ const searchResults = ref<ProductItem[]>([])
 
 const currentPage = ref(1)
 const totalPages = ref(1)
+
+const categoryOptions = ref<CategoryItem[]>([])
 
 let searchSeq = 0
 let loadSeq = 0
@@ -94,6 +98,7 @@ const form = reactive({
   description: '',
   price: '',
   stock: '',
+  categoryId: '',
 })
 const fieldErrors = reactive<{ name?: string; price?: string; stock?: string }>({})
 const formError = ref('')
@@ -109,6 +114,7 @@ function openCreate() {
   form.description = ''
   form.price = ''
   form.stock = ''
+  form.categoryId = ''
   fieldErrors.name = undefined
   fieldErrors.price = undefined
   fieldErrors.stock = undefined
@@ -122,6 +128,7 @@ function openEdit(product: ProductItem) {
   form.description = product.description === '—' ? '' : product.description
   form.price = product.price === '—' ? '' : String(product.price)
   form.stock = String(product.stock)
+  form.categoryId = product.categoryId ? String(product.categoryId) : ''
   fieldErrors.name = undefined
   fieldErrors.price = undefined
   fieldErrors.stock = undefined
@@ -166,6 +173,9 @@ async function onSubmit() {
 
     if (form.stock.trim())
       payload.stock = Number.parseInt(form.stock.trim(), 10)
+
+    if (form.categoryId)
+      payload.categoryId = form.categoryId
 
     if (editing.value)
       await updateProduct(editing.value.id, payload)
@@ -274,7 +284,19 @@ watch(debouncedSearch, () => {
   void loadData(false)
 })
 
-onMounted(() => loadData())
+async function loadCategoryOptions() {
+  try {
+    categoryOptions.value = await getAllCategories()
+  }
+  catch {
+    categoryOptions.value = []
+  }
+}
+
+onMounted(() => {
+  void loadData()
+  void loadCategoryOptions()
+})
 </script>
 
 <template>
@@ -336,6 +358,21 @@ onMounted(() => loadData())
           <p v-if="fieldErrors.name" class="text-xs text-destructive" role="alert">
             {{ fieldErrors.name }}
           </p>
+        </div>
+
+        <div class="grid gap-2">
+          <Label for="product-category">{{ $t('products.category') }}</Label>
+          <select
+            id="product-category"
+            v-model="form.categoryId"
+            class="border-input dark:bg-input/30 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+            :disabled="saving"
+          >
+            <option value="">{{ $t('products.noCategory') }}</option>
+            <option v-for="category in categoryOptions" :key="String(category.id)" :value="String(category.id)">
+              {{ category.name }}
+            </option>
+          </select>
         </div>
 
         <div class="grid gap-2">

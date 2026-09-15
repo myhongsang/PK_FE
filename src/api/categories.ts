@@ -44,6 +44,22 @@ export async function getCategories(
   }
 }
 
+export async function getAllCategories(): Promise<CategoryItem[]> {
+  const all: CategoryItem[] = []
+  const maxPages = 20
+
+  for (let page = 1; page <= maxPages; page++) {
+    const result = await getCategories('', page)
+
+    all.push(...result.rows)
+
+    if (result.rows.length === 0 || page >= result.meta.totalPages)
+      break
+  }
+
+  return all
+}
+
 export async function createCategory(payload: CategoryPayload): Promise<CategoryItem> {
   try {
     const response = await api.post(API_ENDPOINTS.CATEGORIES, payload)

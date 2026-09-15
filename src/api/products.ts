@@ -13,6 +13,7 @@ function mapProduct(raw: any): ProductItem {
     description: raw?.description ?? raw?.desc ?? '—',
     price: raw?.price ?? '—',
     stock: raw?.stock ?? raw?.quantity ?? 0,
+    categoryId: raw?.categoryId ?? null,
   }
 }
 

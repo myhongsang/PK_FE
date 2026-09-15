@@ -4,6 +4,7 @@ export interface ProductItem {
   description: string
   price: number | string
   stock: number
+  categoryId: string | number | null
 }
 
 export interface ProductPayload {
@@ -11,4 +12,5 @@ export interface ProductPayload {
   description?: string
   price?: number
   stock?: number
+  categoryId?: string
 }

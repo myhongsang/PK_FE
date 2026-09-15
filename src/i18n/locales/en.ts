@@ -79,6 +79,8 @@ export default {
     pricePlaceholder: 'e.g. 250000',
     stock: 'Stock',
     stockPlaceholder: 'e.g. 10',
+    category: 'Category',
+    noCategory: 'No category',
     nameRequired: 'Please enter the product name.',
     priceInvalid: 'Price must be a non-negative number.',
     stockInvalid: 'Stock must be a non-negative integer.',

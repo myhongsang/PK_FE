@@ -79,6 +79,8 @@ export default {
     pricePlaceholder: 'Ví dụ: 250000',
     stock: 'Số lượng',
     stockPlaceholder: 'Ví dụ: 10',
+    category: 'Danh mục',
+    noCategory: 'Không có danh mục',
     nameRequired: 'Vui lòng nhập tên sản phẩm.',
     priceInvalid: 'Giá phải là số không âm.',
     stockInvalid: 'Số lượng phải là số nguyên không âm.',
