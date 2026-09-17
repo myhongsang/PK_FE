@@ -70,6 +70,7 @@ export default {
     empty: 'No products yet.',
     searchPlaceholder: 'Search by name or description…',
     noResults: 'No products found.',
+    noCategoryProducts: 'This category has no products yet.',
     add: 'Add product',
     name: 'Product name',
     namePlaceholder: 'e.g. Mechanical keyboard',

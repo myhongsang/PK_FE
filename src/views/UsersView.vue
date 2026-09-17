@@ -9,6 +9,7 @@ import UsersTable from '@/components/UsersTable.vue'
 import ListCard from '@/components/ListCard.vue'
 import { Pagination } from '@/components/ui/pagination'
 import { counts } from '@/stores/counts'
+import { resolvePageTarget } from '@/lib/pagination-guard'
 import type { SearchSuggestion } from '@/lib/search'
 import type { UserItem } from '@/types/user'
 
@@ -98,13 +99,15 @@ async function loadData(showLoading = true) {
       if (seq !== loadSeq)
         return
 
-      if (page > result.meta.totalPages) {
-        currentPage.value = Math.max(1, result.meta.totalPages)
+      const target = resolvePageTarget(page, result.meta.totalPages)
+
+      if (target.outOfRange) {
+        currentPage.value = target.lastPage
         continue
       }
 
       users.value = result.rows
-      totalPages.value = result.meta.totalPages
+      totalPages.value = target.lastPage
 
       if (!term)
         counts.users = result.meta.total ?? result.rows.length

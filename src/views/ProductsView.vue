@@ -6,6 +6,9 @@ import { LoaderCircleIcon, PlusIcon } from '@lucide/vue'
 
 import { createProduct, deleteProduct, getProducts, updateProduct } from '@/api/products'
 import { getAllCategories } from '@/api/categories'
+import { resolveEmptyReason } from '@/lib/empty-state'
+import { hasNumberInput, parseIntegerInput, parseNumberInput } from '@/lib/price'
+import { resolvePageTarget } from '@/lib/pagination-guard'
 import SearchInput from '@/components/SearchInput.vue'
 import ProductsTable from '@/components/ProductsTable.vue'
 import ListCard from '@/components/ListCard.vue'
@@ -15,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import type { ProductFilters } from '@/api/products'
 import type { CategoryItem } from '@/types/category'
 import type { SearchSuggestion } from '@/lib/search'
 import type { ProductItem, ProductPayload } from '@/types/product'
@@ -35,10 +39,12 @@ const totalPages = ref(1)
 const categoryOptions = ref<CategoryItem[]>([])
 
 const filterCategoryId = ref('')
-const filterMinPrice = ref('')
-const filterMaxPrice = ref('')
+const filterMinPrice = ref<string | number>('')
+const filterMaxPrice = ref<string | number>('')
 const debouncedMinPrice = refDebounced(filterMinPrice, 300)
 const debouncedMaxPrice = refDebounced(filterMaxPrice, 300)
+
+const selectedCategoryIsEmpty = ref(false)
 
 let searchSeq = 0
 let loadSeq = 0
@@ -56,16 +62,11 @@ const suggestions = computed<SearchSuggestion[]>(() => {
     .map(product => ({ label: product.name, detail: product.description }))
 })
 
-function currentFilters() {
-  const min = debouncedMinPrice.value.trim()
-  const max = debouncedMaxPrice.value.trim()
-  const minNumber = min === '' ? undefined : Number(min)
-  const maxNumber = max === '' ? undefined : Number(max)
-
+function currentFilters(): ProductFilters {
   return {
-    categoryId: filterCategoryId.value || undefined,
-    minPrice: minNumber !== undefined && Number.isFinite(minNumber) ? minNumber : undefined,
-    maxPrice: maxNumber !== undefined && Number.isFinite(maxNumber) ? maxNumber : undefined,
+    categoryId: filterCategoryId.value ? String(filterCategoryId.value) : undefined,
+    minPrice: parseNumberInput(debouncedMinPrice.value),
+    maxPrice: parseNumberInput(debouncedMaxPrice.value),
   }
 }
 
@@ -74,6 +75,20 @@ function clearFilters() {
   filterMinPrice.value = ''
   filterMaxPrice.value = ''
 }
+
+const emptyText = computed(() => {
+  const reason = resolveEmptyReason({
+    categoryId: filterCategoryId.value ? String(filterCategoryId.value) : '',
+    categoryIsEmpty: selectedCategoryIsEmpty.value,
+    searchTerm: debouncedSearch.value.trim(),
+    hasRangeFilter: hasNumberInput(debouncedMinPrice.value) || hasNumberInput(debouncedMaxPrice.value),
+  })
+
+  if (reason === 'category')
+    return t('products.noCategoryProducts')
+
+  return reason === 'filtered' ? t('products.noResults') : t('products.empty')
+})
 
 async function runSearch(term: string) {
   const clean = term.trim()
@@ -118,7 +133,13 @@ const description = computed(() =>
 
 const formOpen = ref(false)
 const editing = ref<ProductItem | null>(null)
-const form = reactive({
+const form = reactive<{
+  name: string
+  description: string
+  price: string | number
+  stock: string | number
+  categoryId: string
+}>({
   name: '',
   description: '',
   price: '',
@@ -166,15 +187,13 @@ function validate(): boolean {
   fieldErrors.price = undefined
   fieldErrors.stock = undefined
 
-  if (!form.name.trim())
+  if (!String(form.name ?? '').trim())
     fieldErrors.name = t('products.nameRequired')
 
-  const price = form.price.trim()
-  if (price && !/^\d+(\.\d+)?$/.test(price))
+  if (hasNumberInput(form.price) && parseNumberInput(form.price) === undefined)
     fieldErrors.price = t('products.priceInvalid')
 
-  const stock = form.stock.trim()
-  if (stock && !/^\d+$/.test(stock))
+  if (hasNumberInput(form.stock) && parseIntegerInput(form.stock) === undefined)
     fieldErrors.stock = t('products.stockInvalid')
 
   return !fieldErrors.name && !fieldErrors.price && !fieldErrors.stock
@@ -188,16 +207,19 @@ async function onSubmit() {
 
   saving.value = true
   try {
+    const price = parseNumberInput(form.price)
+    const stock = parseIntegerInput(form.stock)
+
     const payload: ProductPayload = {
-      name: form.name.trim(),
-      description: form.description.trim(),
+      name: String(form.name ?? '').trim(),
+      description: String(form.description ?? '').trim(),
     }
 
-    if (form.price.trim())
-      payload.price = Number(form.price.trim())
+    if (price !== undefined)
+      payload.price = price
 
-    if (form.stock.trim())
-      payload.stock = Number.parseInt(form.stock.trim(), 10)
+    if (stock !== undefined)
+      payload.stock = stock
 
     if (form.categoryId)
       payload.categoryId = form.categoryId
@@ -252,6 +274,46 @@ async function onConfirmDelete() {
   }
 }
 
+async function syncSelectedCategoryIsEmpty(
+  seq: number,
+  visibleTotal: number,
+  term: string,
+  filters: ProductFilters,
+) {
+  const categoryId = filters.categoryId
+
+  if (!categoryId) {
+    selectedCategoryIsEmpty.value = false
+    return
+  }
+
+  const narrowedFurther =
+    term !== '' || filters.minPrice !== undefined || filters.maxPrice !== undefined
+
+  if (!narrowedFurther) {
+    selectedCategoryIsEmpty.value = visibleTotal === 0
+    return
+  }
+
+  if (visibleTotal > 0) {
+    selectedCategoryIsEmpty.value = false
+    return
+  }
+
+  try {
+    const probe = await getProducts(undefined, 1, { categoryId })
+
+    if (seq !== loadSeq)
+      return
+
+    selectedCategoryIsEmpty.value = (probe.meta.total ?? probe.rows.length) === 0
+  }
+  catch {
+    if (seq === loadSeq)
+      selectedCategoryIsEmpty.value = false
+  }
+}
+
 async function loadData(showLoading = true) {
   if (showLoading)
     loading.value = true
@@ -263,21 +325,31 @@ async function loadData(showLoading = true) {
     for (let attempt = 0; attempt < 3; attempt++) {
       const page = currentPage.value
       const term = debouncedSearch.value
-      const result = await getProducts(term, page, currentFilters())
+      const filters = currentFilters()
+      const result = await getProducts(term, page, filters)
 
       if (seq !== loadSeq)
         return
 
-      if (page > result.meta.totalPages) {
-        currentPage.value = Math.max(1, result.meta.totalPages)
+      const target = resolvePageTarget(page, result.meta.totalPages)
+
+      if (target.outOfRange) {
+        currentPage.value = target.lastPage
         continue
       }
 
       products.value = result.rows
-      totalPages.value = result.meta.totalPages
+      totalPages.value = target.lastPage
 
       if (!term)
         counts.products = result.meta.total ?? result.rows.length
+
+      await syncSelectedCategoryIsEmpty(
+        seq,
+        result.meta.total ?? result.rows.length,
+        term.trim(),
+        filters,
+      )
 
       return
     }
@@ -336,7 +408,7 @@ onMounted(() => {
     :loading="loading"
     :error-message="errorMessage"
     :is-empty="displayedProducts.length === 0"
-    :empty-text="debouncedSearch || filterCategoryId || debouncedMinPrice || debouncedMaxPrice ? $t('products.noResults') : $t('products.empty')"
+    :empty-text="emptyText"
     @retry="loadData"
   >
     <template #action>
@@ -347,54 +419,52 @@ onMounted(() => {
     </template>
 
     <template #toolbar>
-      <div class="grid gap-3">
-        <div class="max-w-sm">
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="min-w-60 grow">
           <SearchInput v-model="search" :placeholder="$t('products.searchPlaceholder')" :suggestions="suggestions" />
         </div>
 
-        <div class="flex flex-wrap items-end gap-3">
-          <div class="grid gap-1.5">
-            <Label for="filter-category" class="text-xs text-muted-foreground">{{ $t('products.category') }}</Label>
-            <select
-              id="filter-category"
-              v-model="filterCategoryId"
-              class="border-input dark:bg-input/30 flex h-9 w-48 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 md:text-sm"
-            >
-              <option value="">{{ $t('products.allCategories') }}</option>
-              <option v-for="category in categoryOptions" :key="String(category.id)" :value="String(category.id)">
-                {{ category.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="grid gap-1.5">
-            <Label for="filter-min-price" class="text-xs text-muted-foreground">{{ $t('products.priceFrom') }}</Label>
-            <Input
-              id="filter-min-price"
-              v-model="filterMinPrice"
-              type="number"
-              min="0"
-              class="w-32"
-              :placeholder="$t('products.priceMinPlaceholder')"
-            />
-          </div>
-
-          <div class="grid gap-1.5">
-            <Label for="filter-max-price" class="text-xs text-muted-foreground">{{ $t('products.priceTo') }}</Label>
-            <Input
-              id="filter-max-price"
-              v-model="filterMaxPrice"
-              type="number"
-              min="0"
-              class="w-32"
-              :placeholder="$t('products.priceMaxPlaceholder')"
-            />
-          </div>
-
-          <Button variant="outline" size="sm" class="text-muted-foreground" @click="clearFilters">
-            {{ $t('products.clearFilters') }}
-          </Button>
+        <div class="grid gap-1.5">
+          <Label for="filter-category" class="text-xs text-muted-foreground">{{ $t('products.category') }}</Label>
+          <select
+            id="filter-category"
+            v-model="filterCategoryId"
+            class="border-input dark:bg-input/30 flex h-9 w-48 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 md:text-sm"
+          >
+            <option value="">{{ $t('products.allCategories') }}</option>
+            <option v-for="category in categoryOptions" :key="String(category.id)" :value="String(category.id)">
+              {{ category.name }}
+            </option>
+          </select>
         </div>
+
+        <div class="grid gap-1.5">
+          <Label for="filter-min-price" class="text-xs text-muted-foreground">{{ $t('products.priceFrom') }}</Label>
+          <Input
+            id="filter-min-price"
+            v-model="filterMinPrice"
+            type="number"
+            min="0"
+            class="w-32"
+            :placeholder="$t('products.priceMinPlaceholder')"
+          />
+        </div>
+
+        <div class="grid gap-1.5">
+          <Label for="filter-max-price" class="text-xs text-muted-foreground">{{ $t('products.priceTo') }}</Label>
+          <Input
+            id="filter-max-price"
+            v-model="filterMaxPrice"
+            type="number"
+            min="0"
+            class="w-32"
+            :placeholder="$t('products.priceMaxPlaceholder')"
+          />
+        </div>
+
+        <Button variant="outline" size="sm" class="text-muted-foreground" @click="clearFilters">
+          {{ $t('products.clearFilters') }}
+        </Button>
       </div>
     </template>
 

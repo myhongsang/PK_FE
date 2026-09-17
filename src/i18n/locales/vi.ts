@@ -70,6 +70,7 @@ export default {
     empty: 'Chưa có sản phẩm nào.',
     searchPlaceholder: 'Tìm theo tên hoặc mô tả…',
     noResults: 'Không tìm thấy sản phẩm nào.',
+    noCategoryProducts: 'Chưa có sản phẩm nào thuộc danh mục này.',
     add: 'Thêm sản phẩm',
     name: 'Tên sản phẩm',
     namePlaceholder: 'Ví dụ: Bàn phím cơ',
