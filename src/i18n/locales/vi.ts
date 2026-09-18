@@ -50,6 +50,7 @@ export default {
     users: 'Người dùng',
     products: 'Sản phẩm',
     categories: 'Danh mục',
+    statistics: 'Thống kê',
     signOut: 'Đăng xuất',
     userFallback: 'Người dùng',
   },
@@ -142,5 +143,15 @@ export default {
     createFailed: 'Không thể thêm danh mục. Vui lòng thử lại.',
     updateFailed: 'Không thể cập nhật danh mục. Vui lòng thử lại.',
     deleteFailed: 'Không thể xoá danh mục. Vui lòng thử lại.',
+  },
+  statistics: {
+    title: 'Thống kê đơn hàng',
+    description: 'Tổng quan số lượng và giá trị các đơn hàng.',
+    empty: 'Chưa có đơn hàng nào.',
+    loadFailed: 'Không thể tải dữ liệu thống kê. Vui lòng thử lại.',
+    orderCount: 'Số đơn hàng',
+    orderValue: 'Giá trị đơn',
+    paid: 'Đã thu',
+    outstanding: 'Còn phải thu',
   },
 }

@@ -34,6 +34,11 @@ const router = createRouter({
           name: 'dashboard-categories',
           component: () => import('@/views/CategoriesView.vue'),
         },
+        {
+          path: 'statistics',
+          name: 'dashboard-statistics',
+          component: () => import('@/views/StatisticsView.vue'),
+        },
       ],
     },
     { path: '/', redirect: { name: 'dashboard' } },

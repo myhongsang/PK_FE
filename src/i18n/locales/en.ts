@@ -50,6 +50,7 @@ export default {
     users: 'Users',
     products: 'Products',
     categories: 'Categories',
+    statistics: 'Statistics',
     signOut: 'Sign out',
     userFallback: 'User',
   },
@@ -142,5 +143,15 @@ export default {
     createFailed: 'Unable to add the category. Please try again.',
     updateFailed: 'Unable to update the category. Please try again.',
     deleteFailed: 'Unable to delete the category. Please try again.',
+  },
+  statistics: {
+    title: 'Order statistics',
+    description: 'Overview of order counts and values.',
+    empty: 'No orders yet.',
+    loadFailed: 'Unable to load statistics. Please try again.',
+    orderCount: 'Orders',
+    orderValue: 'Order value',
+    paid: 'Collected',
+    outstanding: 'Outstanding',
   },
 }

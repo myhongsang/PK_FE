@@ -7,6 +7,8 @@ export const API_ENDPOINTS = {
   USERS: '/users',
   PRODUCTS: '/products',
   CATEGORIES: '/categories',
+  ORDERS: '/orders',
+  ORDER_STATISTICS: '/orders/statistics',
 } as const
 
 export const TOKEN_STORAGE_KEY = 'access_token'

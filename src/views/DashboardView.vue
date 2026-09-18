@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { LogOutIcon, PackageIcon, TagsIcon, UsersIcon } from '@lucide/vue'
+import { ChartColumnIcon, LogOutIcon, PackageIcon, TagsIcon, UsersIcon } from '@lucide/vue'
 
 import { getStoredSession, signOut as clearSession } from '@/api/auth'
 import { counts } from '@/stores/counts'
@@ -80,6 +80,14 @@ function handleSignOut() {
             <TagsIcon class="size-4" aria-hidden="true" />
             {{ $t('nav.categories') }}
             <span class="ml-auto rounded-full bg-primary/10 px-1.5 py-0.5 text-xs text-primary">{{ counts.categories }}</span>
+          </RouterLink>
+          <RouterLink
+            to="/dashboard/statistics"
+            class="inline-flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-foreground"
+            active-class="bg-primary/10 text-primary"
+          >
+            <ChartColumnIcon class="size-4" aria-hidden="true" />
+            {{ $t('nav.statistics') }}
           </RouterLink>
         </nav>
 
