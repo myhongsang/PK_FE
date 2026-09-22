@@ -14,3 +14,5 @@ export const API_ENDPOINTS = {
 export const TOKEN_STORAGE_KEY = 'access_token'
 
 export const USER_STORAGE_KEY = 'user'
+
+export const REMEMBER_STORAGE_KEY = 'remember_login'

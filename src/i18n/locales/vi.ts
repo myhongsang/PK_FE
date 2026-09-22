@@ -36,6 +36,7 @@ export default {
     passwordPlaceholder: '••••••••',
     showPassword: 'Hiện mật khẩu',
     hidePassword: 'Ẩn mật khẩu',
+    rememberMe: 'Ghi nhớ đăng nhập',
     submit: 'Đăng nhập',
     submitting: 'Đang đăng nhập…',
     emailRequired: 'Vui lòng nhập email.',
