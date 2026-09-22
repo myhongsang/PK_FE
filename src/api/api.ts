@@ -11,6 +11,7 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem(TOKEN_STORAGE_KEY)
+    ?? localStorage.getItem(TOKEN_STORAGE_KEY)
   if (token)
     config.headers.Authorization = `Bearer ${token}`
 
@@ -26,6 +27,8 @@ api.interceptors.response.use(
     ) {
       sessionStorage.removeItem(TOKEN_STORAGE_KEY)
       sessionStorage.removeItem(USER_STORAGE_KEY)
+      localStorage.removeItem(TOKEN_STORAGE_KEY)
+      localStorage.removeItem(USER_STORAGE_KEY)
       window.location.reload()
     }
 

@@ -36,6 +36,7 @@ export default {
     passwordPlaceholder: '••••••••',
     showPassword: 'Show password',
     hidePassword: 'Hide password',
+    rememberMe: 'Remember login',
     submit: 'Log in',
     submitting: 'Logging in…',
     emailRequired: 'Please enter your email.',

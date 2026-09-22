@@ -1,9 +1,45 @@
 import api from '@/api/api'
 import i18n from '@/i18n'
-import { API_ENDPOINTS, TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from '@/constants/api'
+import {
+  API_ENDPOINTS,
+  REMEMBER_STORAGE_KEY,
+  TOKEN_STORAGE_KEY,
+  USER_STORAGE_KEY,
+} from '@/constants/api'
 import type { LoginPayload, LoginResult } from '@/types/auth'
 
 let verifiedSession: LoginResult | null | undefined
+
+function persistSession(result: LoginResult, remember: boolean): void {
+  const primary = remember ? localStorage : sessionStorage
+  const secondary = remember ? sessionStorage : localStorage
+
+  primary.setItem(TOKEN_STORAGE_KEY, result.accessToken)
+  primary.setItem(USER_STORAGE_KEY, JSON.stringify(result.user))
+  secondary.removeItem(TOKEN_STORAGE_KEY)
+  secondary.removeItem(USER_STORAGE_KEY)
+
+  try {
+    localStorage.setItem(REMEMBER_STORAGE_KEY, remember ? '1' : '0')
+  }
+  catch { }
+}
+
+export function getRememberPreference(): boolean {
+  try {
+    return localStorage.getItem(REMEMBER_STORAGE_KEY) !== '0'
+  }
+  catch {
+    return true
+  }
+}
+
+function clearStoredSession(): void {
+  sessionStorage.removeItem(TOKEN_STORAGE_KEY)
+  sessionStorage.removeItem(USER_STORAGE_KEY)
+  localStorage.removeItem(TOKEN_STORAGE_KEY)
+  localStorage.removeItem(USER_STORAGE_KEY)
+}
 
 export async function login(
   payload: LoginPayload
@@ -26,8 +62,7 @@ export async function login(
       },
     }
 
-    sessionStorage.setItem(TOKEN_STORAGE_KEY, result.accessToken)
-    sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(result.user))
+    persistSession(result, payload.remember === true)
 
     verifiedSession = result
 
@@ -42,14 +77,15 @@ export async function login(
 
 export function signOut(): void {
   verifiedSession = null
-  sessionStorage.removeItem(TOKEN_STORAGE_KEY)
-  sessionStorage.removeItem(USER_STORAGE_KEY)
+  clearStoredSession()
 }
 
 export function getStoredSession(): LoginResult | null {
   try {
     const accessToken = sessionStorage.getItem(TOKEN_STORAGE_KEY)
+      ?? localStorage.getItem(TOKEN_STORAGE_KEY)
     const rawUser = sessionStorage.getItem(USER_STORAGE_KEY)
+      ?? localStorage.getItem(USER_STORAGE_KEY)
 
     if (!accessToken || !rawUser)
       return null
@@ -66,8 +102,7 @@ export function getStoredSession(): LoginResult | null {
     }
   }
   catch {
-    sessionStorage.removeItem(TOKEN_STORAGE_KEY)
-    sessionStorage.removeItem(USER_STORAGE_KEY)
+    clearStoredSession()
     return null
   }
 }

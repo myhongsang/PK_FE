@@ -7,11 +7,12 @@ import { EyeIcon, EyeOffIcon, LoaderCircleIcon } from '@lucide/vue'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
-import { login, } from '@/api/auth'
+import { getRememberPreference, login } from '@/api/auth'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -25,6 +26,7 @@ const fieldErrors = reactive<{ email?: string, password?: string }>({})
 const formError = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
+const remember = ref(getRememberPreference())
 
 const emailInvalid = computed(() => Boolean(fieldErrors.email))
 
@@ -60,6 +62,7 @@ async function onSubmit() {
     await login({
       email: form.email.trim(),
       password: form.password,
+      remember: remember.value,
     })
 
     router.replace('/dashboard')
@@ -141,6 +144,16 @@ async function onSubmit() {
                 <p v-if="fieldErrors.password" class="text-xs text-destructive" role="alert">
                   {{ fieldErrors.password }}
                 </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <Checkbox
+                  id="remember"
+                  :model-value="remember"
+                  :disabled="loading"
+                  @update:model-value="remember = $event === true"
+                />
+                <Label for="remember" class="text-sm font-normal">{{ $t('auth.rememberMe') }}</Label>
               </div>
 
               <Alert v-if="formError" variant="destructive">
