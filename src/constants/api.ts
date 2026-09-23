@@ -13,6 +13,10 @@ export const API_ENDPOINTS = {
 
 export const TOKEN_STORAGE_KEY = 'access_token'
 
+export const TOKEN_EXPIRY_STORAGE_KEY = 'access_token_expires_at'
+
 export const USER_STORAGE_KEY = 'user'
 
 export const REMEMBER_STORAGE_KEY = 'remember_login'
+
+export const REMEMBERED_EMAIL_STORAGE_KEY = 'remembered_email'

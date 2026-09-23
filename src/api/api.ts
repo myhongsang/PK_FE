@@ -1,6 +1,12 @@
 import axios from 'axios'
 
-import { API_BASE_URL, API_ENDPOINTS, TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from '@/constants/api'
+import {
+  API_BASE_URL,
+  API_ENDPOINTS,
+  TOKEN_EXPIRY_STORAGE_KEY,
+  TOKEN_STORAGE_KEY,
+  USER_STORAGE_KEY,
+} from '@/constants/api'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -27,9 +33,13 @@ api.interceptors.response.use(
     ) {
       sessionStorage.removeItem(TOKEN_STORAGE_KEY)
       sessionStorage.removeItem(USER_STORAGE_KEY)
+      sessionStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY)
       localStorage.removeItem(TOKEN_STORAGE_KEY)
       localStorage.removeItem(USER_STORAGE_KEY)
-      window.location.reload()
+      localStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY)
+
+      if (!window.location.pathname.startsWith('/login'))
+        window.location.replace('/login?reason=expired')
     }
 
     return Promise.reject(error)

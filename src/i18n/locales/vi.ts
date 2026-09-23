@@ -44,6 +44,7 @@ export default {
     passwordRequired: 'Vui lòng nhập mật khẩu.',
     passwordTooShort: 'Mật khẩu phải có ít nhất 6 ký tự.',
     loginFailed: 'Email hoặc mật khẩu không đúng. Vui lòng thử lại.',
+    sessionExpired: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
   },
   nav: {
     brand: 'PK Dashboard',
