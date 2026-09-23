@@ -11,6 +11,7 @@ import ListCard from '@/components/ListCard.vue'
 import { Pagination } from '@/components/ui/pagination'
 import { counts } from '@/stores/counts'
 import { resolvePageTarget } from '@/lib/pagination-guard'
+import { usePageQuery } from '@/lib/use-page-query'
 import type { SearchSuggestion } from '@/lib/search'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -30,6 +31,8 @@ const searchResults = ref<CategoryItem[]>([])
 
 const currentPage = ref(1)
 const totalPages = ref(1)
+
+usePageQuery(currentPage)
 
 let searchSeq = 0
 let loadSeq = 0

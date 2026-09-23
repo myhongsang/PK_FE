@@ -9,6 +9,7 @@ import { getAllCategories } from '@/api/categories'
 import { resolveEmptyReason } from '@/lib/empty-state'
 import { hasNumberInput, parseIntegerInput, parseNumberInput } from '@/lib/price'
 import { resolvePageTarget } from '@/lib/pagination-guard'
+import { usePageQuery } from '@/lib/use-page-query'
 import SearchInput from '@/components/SearchInput.vue'
 import ProductsTable from '@/components/ProductsTable.vue'
 import ListCard from '@/components/ListCard.vue'
@@ -35,6 +36,8 @@ const searchResults = ref<ProductItem[]>([])
 
 const currentPage = ref(1)
 const totalPages = ref(1)
+
+usePageQuery(currentPage)
 
 const categoryOptions = ref<CategoryItem[]>([])
 
