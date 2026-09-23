@@ -11,4 +11,5 @@ export interface LoginResult {
     name: string
     email: string
   }
+  expiresAt?: number
 }

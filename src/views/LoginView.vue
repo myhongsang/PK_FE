@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { EyeIcon, EyeOffIcon, LoaderCircleIcon } from '@lucide/vue'
 
@@ -12,23 +12,27 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
-import { getRememberPreference, login } from '@/api/auth'
+import { getRememberedEmail, getRememberPreference, login } from '@/api/auth'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 
+const loading = ref(false)
+const showPassword = ref(false)
+const remember = ref(getRememberPreference())
+const rememberedEmail = getRememberedEmail()
+
 const form = reactive({
-  email: '',
+  email: rememberedEmail,
   password: '',
 })
 
 const fieldErrors = reactive<{ email?: string, password?: string }>({})
 const formError = ref('')
-const loading = ref(false)
-const showPassword = ref(false)
-const remember = ref(getRememberPreference())
 
 const emailInvalid = computed(() => Boolean(fieldErrors.email))
+const sessionExpired = computed(() => route.query.reason === 'expired')
 
 function validate(): boolean {
   fieldErrors.email = undefined
@@ -155,6 +159,10 @@ async function onSubmit() {
                 />
                 <Label for="remember" class="text-sm font-normal">{{ $t('auth.rememberMe') }}</Label>
               </div>
+
+              <Alert v-if="sessionExpired">
+                <AlertDescription>{{ $t('auth.sessionExpired') }}</AlertDescription>
+              </Alert>
 
               <Alert v-if="formError" variant="destructive">
                 <AlertDescription>{{ formError }}</AlertDescription>

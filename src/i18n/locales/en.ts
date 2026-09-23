@@ -44,6 +44,7 @@ export default {
     passwordRequired: 'Please enter your password.',
     passwordTooShort: 'Password must be at least 6 characters.',
     loginFailed: 'Incorrect email or password. Please try again.',
+    sessionExpired: 'Your session has expired. Please log in again.',
   },
   nav: {
     brand: 'PK Dashboard',
