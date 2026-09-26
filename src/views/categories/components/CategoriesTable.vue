@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { PencilIcon, Trash2Icon } from '@lucide/vue'
-
-import { Button } from '@/components/ui/button'
+import TableRowActions from '@/components/TableRowActions.vue'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { CategoryItem } from '@/types/category'
 
@@ -34,25 +32,12 @@ const emit = defineEmits<{
         <TableCell class="font-medium">{{ item.name }}</TableCell>
         <TableCell class="text-muted-foreground">{{ item.description }}</TableCell>
         <TableCell>
-          <div class="flex justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              :aria-label="t('categories.editAction')"
-              @click="emit('edit', item)"
-            >
-              <PencilIcon aria-hidden="true" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              class="text-destructive hover:text-destructive"
-              :aria-label="t('categories.deleteAction')"
-              @click="emit('remove', item)"
-            >
-              <Trash2Icon aria-hidden="true" />
-            </Button>
-          </div>
+          <TableRowActions
+            :edit-label="t('categories.editAction')"
+            :delete-label="t('categories.deleteAction')"
+            @edit="emit('edit', item)"
+            @delete="emit('remove', item)"
+          />
         </TableCell>
       </TableRow>
     </TableBody>

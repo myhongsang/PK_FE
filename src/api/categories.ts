@@ -4,12 +4,10 @@ import { API_ENDPOINTS } from '@/constants/api'
 import { fetchRowsPage } from '@/api/search'
 
 import type { PageResult } from '@/types/pagination'
-import type { CategoryItem } from '@/types/category'
+import type { CategoryItem, CategoryPayload } from '@/types/category'
 
-export interface CategoryPayload {
-  name: string
-  description: string
-}
+export type { CategoryPayload }
+
 
 function mapCategory(raw: any): CategoryItem {
   return {

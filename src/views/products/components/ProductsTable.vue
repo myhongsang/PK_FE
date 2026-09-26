@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { PencilIcon, Trash2Icon } from '@lucide/vue'
-
-import { Button } from '@/components/ui/button'
+import TableRowActions from '@/components/TableRowActions.vue'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { ProductItem } from '@/types/product'
 
@@ -45,25 +43,12 @@ function formatPrice(price: number | string) {
         <TableCell class="text-right">{{ formatPrice(item.price) }}</TableCell>
         <TableCell class="text-center">{{ item.stock }}</TableCell>
         <TableCell>
-          <div class="flex justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              :aria-label="t('products.editAction')"
-              @click="emit('edit', item)"
-            >
-              <PencilIcon aria-hidden="true" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              class="text-destructive hover:text-destructive"
-              :aria-label="t('products.deleteAction')"
-              @click="emit('remove', item)"
-            >
-              <Trash2Icon aria-hidden="true" />
-            </Button>
-          </div>
+          <TableRowActions
+            :edit-label="t('products.editAction')"
+            :delete-label="t('products.deleteAction')"
+            @edit="emit('edit', item)"
+            @delete="emit('remove', item)"
+          />
         </TableCell>
       </TableRow>
     </TableBody>

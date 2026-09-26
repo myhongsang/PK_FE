@@ -1,8 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import { verifyStoredSession } from '@/api/auth'
-import DashboardView from '@/views/DashboardView.vue'
-import LoginView from '@/views/LoginView.vue'
+import DashboardView from '@/views/dashboard/DashboardView.vue'
+import LoginView from '@/views/auth/LoginView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -22,22 +22,22 @@ const router = createRouter({
         {
           path: 'users',
           name: 'dashboard-users',
-          component: () => import('@/views/UsersView.vue'),
+          component: () => import('@/views/users/UsersView.vue'),
         },
         {
           path: 'products',
           name: 'dashboard-products',
-          component: () => import('@/views/ProductsView.vue'),
+          component: () => import('@/views/products/ProductsView.vue'),
         },
         {
           path: 'categories',
           name: 'dashboard-categories',
-          component: () => import('@/views/CategoriesView.vue'),
+          component: () => import('@/views/categories/CategoriesView.vue'),
         },
         {
           path: 'statistics',
           name: 'dashboard-statistics',
-          component: () => import('@/views/StatisticsView.vue'),
+          component: () => import('@/views/statistics/StatisticsView.vue'),
         },
       ],
     },
@@ -59,3 +59,4 @@ router.beforeEach(async (to) => {
 })
 
 export default router
+
