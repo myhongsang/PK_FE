@@ -3,16 +3,17 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
-import { getStoredSession, signOut as clearSession } from '@/api/auth'
+import { signOut as clearSession } from '@/api/auth'
+import { useAuth } from '@/stores/auth'
 import DashboardHeader from '@/views/dashboard/components/DashboardHeader.vue'
 import DashboardSidebar from '@/views/dashboard/components/DashboardSidebar.vue'
 
 const router = useRouter()
 const { t } = useI18n()
-const user = getStoredSession()!
+const { state: auth } = useAuth()
 
 const displayName = computed(() =>
-  user?.user?.name || user?.user?.email || t('nav.userFallback'),
+  auth.value.user?.name || auth.value.user?.email || t('nav.userFallback'),
 )
 const avatarLetter = computed(() =>
   (displayName.value || 'U').charAt(0).toUpperCase(),
@@ -28,7 +29,7 @@ function handleSignOut() {
   <div class="flex h-svh flex-col bg-background">
     <DashboardHeader
       :display-name="displayName"
-      :email="user?.user?.email"
+      :email="auth.user?.email"
       :avatar-letter="avatarLetter"
     />
 
@@ -41,3 +42,4 @@ function handleSignOut() {
     </div>
   </div>
 </template>
+

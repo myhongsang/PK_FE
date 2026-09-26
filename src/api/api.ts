@@ -3,10 +3,8 @@ import axios from 'axios'
 import {
   API_BASE_URL,
   API_ENDPOINTS,
-  TOKEN_EXPIRY_STORAGE_KEY,
-  TOKEN_STORAGE_KEY,
-  USER_STORAGE_KEY,
 } from '@/constants/api'
+import { authStore } from '@/stores/auth'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -16,8 +14,7 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem(TOKEN_STORAGE_KEY)
-    ?? localStorage.getItem(TOKEN_STORAGE_KEY)
+  const token = authStore.getState().token
   if (token)
     config.headers.Authorization = `Bearer ${token}`
 
@@ -31,12 +28,7 @@ api.interceptors.response.use(
       error.response?.status === 401
       && error.config?.url !== API_ENDPOINTS.AUTH.LOGIN
     ) {
-      sessionStorage.removeItem(TOKEN_STORAGE_KEY)
-      sessionStorage.removeItem(USER_STORAGE_KEY)
-      sessionStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY)
-      localStorage.removeItem(TOKEN_STORAGE_KEY)
-      localStorage.removeItem(USER_STORAGE_KEY)
-      localStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY)
+      authStore.getState().clearSession()
 
       if (!window.location.pathname.startsWith('/login'))
         window.location.replace('/login?reason=expired')
