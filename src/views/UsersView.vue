@@ -10,6 +10,7 @@ import ListCard from '@/components/ListCard.vue'
 import { Pagination } from '@/components/ui/pagination'
 import { counts } from '@/stores/counts'
 import { resolvePageTarget } from '@/lib/pagination-guard'
+import { usePageQuery } from '@/lib/use-page-query'
 import type { SearchSuggestion } from '@/lib/search'
 import type { UserItem } from '@/types/user'
 
@@ -25,6 +26,8 @@ const searchResults = ref<UserItem[]>([])
 
 const currentPage = ref(1)
 const totalPages = ref(1)
+
+usePageQuery(currentPage)
 
 let searchSeq = 0
 let loadSeq = 0
