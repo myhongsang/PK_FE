@@ -4,10 +4,8 @@ import {
   API_ENDPOINTS,
   REMEMBERED_EMAIL_STORAGE_KEY,
   REMEMBER_STORAGE_KEY,
-  TOKEN_EXPIRY_STORAGE_KEY,
-  TOKEN_STORAGE_KEY,
-  USER_STORAGE_KEY,
 } from '@/constants/api'
+import { authStore } from '@/stores/auth'
 import type { LoginPayload, LoginResult } from '@/types/auth'
 
 let verifiedSession: LoginResult | null | undefined
@@ -42,33 +40,6 @@ function resolveExpiresAt(raw: any, accessToken: string): number | undefined {
   return decodeJwtExpiresAt(accessToken)
 }
 
-function persistSession(result: LoginResult, remember: boolean): void {
-  const primary = remember ? localStorage : sessionStorage
-  const secondary = remember ? sessionStorage : localStorage
-
-  primary.setItem(TOKEN_STORAGE_KEY, result.accessToken)
-  primary.setItem(USER_STORAGE_KEY, JSON.stringify(result.user))
-
-  if (result.expiresAt === undefined)
-    primary.removeItem(TOKEN_EXPIRY_STORAGE_KEY)
-  else
-    primary.setItem(TOKEN_EXPIRY_STORAGE_KEY, String(result.expiresAt))
-
-  secondary.removeItem(TOKEN_STORAGE_KEY)
-  secondary.removeItem(USER_STORAGE_KEY)
-  secondary.removeItem(TOKEN_EXPIRY_STORAGE_KEY)
-
-  try {
-    localStorage.setItem(REMEMBER_STORAGE_KEY, remember ? '1' : '0')
-
-    if (remember)
-      localStorage.setItem(REMEMBERED_EMAIL_STORAGE_KEY, result.user.email)
-    else
-      localStorage.removeItem(REMEMBERED_EMAIL_STORAGE_KEY)
-  }
-  catch { }
-}
-
 export function getRememberPreference(): boolean {
   try {
     return localStorage.getItem(REMEMBER_STORAGE_KEY) !== '0'
@@ -87,15 +58,6 @@ export function getRememberedEmail(): string {
   }
 }
 
-function clearStoredSession(): void {
-  sessionStorage.removeItem(TOKEN_STORAGE_KEY)
-  sessionStorage.removeItem(USER_STORAGE_KEY)
-  sessionStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY)
-  localStorage.removeItem(TOKEN_STORAGE_KEY)
-  localStorage.removeItem(USER_STORAGE_KEY)
-  localStorage.removeItem(TOKEN_EXPIRY_STORAGE_KEY)
-}
-
 function clearExpiryTimer(): void {
   if (expiryTimer)
     clearTimeout(expiryTimer)
@@ -106,7 +68,7 @@ function clearExpiryTimer(): void {
 function handleSessionExpired(): void {
   expiryTimer = undefined
   verifiedSession = undefined
-  clearStoredSession()
+  authStore.getState().clearSession()
 
   if (!window.location.pathname.startsWith('/login'))
     window.location.replace('/login?reason=expired')
@@ -125,7 +87,7 @@ export function scheduleExpiryCheck(expiresAt?: number): void {
 
   const delay = expiresAt - Date.now() - 1000
 
-   if (delay > MAX_TIMER_DELAY)
+  if (delay > MAX_TIMER_DELAY)
     return
 
   expiryTimer = setTimeout(handleSessionExpired, Math.max(delay, 0))
@@ -155,9 +117,19 @@ export async function login(
       expiresAt: resolveExpiresAt(raw, accessToken),
     }
 
-    persistSession(result, payload.remember === true)
-    scheduleExpiryCheck(result.expiresAt)
+    // Persist session to Zustand store (which syncs to localStorage)
+    authStore.getState().setSession(result)
 
+    try {
+      localStorage.setItem(REMEMBER_STORAGE_KEY, payload.remember ? '1' : '0')
+      if (payload.remember) {
+        localStorage.setItem(REMEMBERED_EMAIL_STORAGE_KEY, result.user.email)
+      } else {
+        localStorage.removeItem(REMEMBERED_EMAIL_STORAGE_KEY)
+      }
+    } catch { }
+
+    scheduleExpiryCheck(result.expiresAt)
     verifiedSession = result
 
     return result
@@ -172,43 +144,29 @@ export async function login(
 export function signOut(): void {
   clearExpiryTimer()
   verifiedSession = null
-  clearStoredSession()
+  authStore.getState().clearSession()
 }
 
 export function getStoredSession(): LoginResult | null {
-  try {
-    const accessToken = sessionStorage.getItem(TOKEN_STORAGE_KEY)
-      ?? localStorage.getItem(TOKEN_STORAGE_KEY)
-    const rawUser = sessionStorage.getItem(USER_STORAGE_KEY)
-      ?? localStorage.getItem(USER_STORAGE_KEY)
+  const { token, user, expiresAt } = authStore.getState()
 
-    if (!accessToken || !rawUser)
-      return null
-
-    const rawExpiresAt = sessionStorage.getItem(TOKEN_EXPIRY_STORAGE_KEY)
-      ?? localStorage.getItem(TOKEN_EXPIRY_STORAGE_KEY)
-    const expiresAt = rawExpiresAt === null ? undefined : Number(rawExpiresAt)
-
-    if (expiresAt !== undefined && (!Number.isFinite(expiresAt) || Date.now() >= expiresAt)) {
-      clearStoredSession()
-      return null
-    }
-
-    const storedUser: any = JSON.parse(rawUser)
-
-    return {
-      accessToken,
-      user: {
-        id: storedUser?.id ?? '',
-        name: storedUser?.name ?? '',
-        email: storedUser?.email ?? '',
-      },
-      expiresAt: expiresAt !== undefined && Number.isFinite(expiresAt) ? expiresAt : undefined,
-    }
-  }
-  catch {
-    clearStoredSession()
+  if (!token || !user) {
     return null
+  }
+
+  if (expiresAt && Date.now() >= expiresAt) {
+    authStore.getState().clearSession()
+    return null
+  }
+
+  return {
+    accessToken: token,
+    user: {
+      id: user.id ?? '',
+      name: user.name ?? '',
+      email: user.email ?? '',
+    },
+    expiresAt: expiresAt ?? undefined,
   }
 }
 
