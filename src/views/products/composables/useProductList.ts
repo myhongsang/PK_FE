@@ -195,6 +195,13 @@ export function useProductList() {
     void loadData(false)
   }
 
+  /** Bỏ ngay bản ghi đã xoá khỏi danh sách hiển thị (soft delete bên BE). */
+  function removeItem(id: ProductItem['id']) {
+    const key = String(id)
+    products.value = products.value.filter(product => String(product.id) !== key)
+    searchResults.value = searchResults.value.filter(product => String(product.id) !== key)
+  }
+
   watch(debouncedSearch, () => {
     currentPage.value = 1
     void loadData(false)
@@ -236,6 +243,7 @@ export function useProductList() {
     loadData,
     clearFilters,
     goToPage,
+    removeItem,
   }
 }
 

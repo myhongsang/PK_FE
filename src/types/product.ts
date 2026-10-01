@@ -1,3 +1,5 @@
+import type { EntityStatus } from '@/constants/status'
+
 export interface ProductItem {
   id: string | number
   name: string
@@ -5,6 +7,7 @@ export interface ProductItem {
   price: number | string
   stock: number
   categoryId: string | number | null
+  status: EntityStatus
 }
 
 export interface ProductPayload {
