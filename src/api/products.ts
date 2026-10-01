@@ -4,7 +4,8 @@ import { API_ENDPOINTS } from '@/constants/api'
 import { STATUS_ACTIVE } from '@/constants/status'
 import { fetchRowsPage } from '@/api/search'
 import { excludeInactive } from '@/lib/status'
-import { invalidatePageCache } from '@/lib/page-cache'
+import { queryClient } from '@/lib/query-client'
+import { queryKeys } from '@/lib/query-keys'
 
 import type { PageResult } from '@/types/pagination'
 import type { ProductItem, ProductPayload } from '@/types/product'
@@ -73,7 +74,7 @@ function unwrap(raw: any): any {
 export async function createProduct(payload: ProductPayload): Promise<ProductItem> {
   try {
     const response = await api.post(API_ENDPOINTS.PRODUCTS, payload)
-    invalidatePageCache('products')
+    void queryClient.invalidateQueries({ queryKey: queryKeys.products.all })
 
     return mapProduct(unwrap(response.data))
   } catch (error: any) {
@@ -90,7 +91,7 @@ export async function updateProduct(
 ): Promise<ProductItem> {
   try {
     const response = await api.patch(`${API_ENDPOINTS.PRODUCTS}/${id}`, payload)
-    invalidatePageCache('products')
+    void queryClient.invalidateQueries({ queryKey: queryKeys.products.all })
 
     return mapProduct(unwrap(response.data))
   } catch (error: any) {
@@ -112,5 +113,5 @@ export async function deleteProduct(id: ProductItem['id']): Promise<void> {
       )
   }
 
-  invalidatePageCache('products')
+  void queryClient.invalidateQueries({ queryKey: queryKeys.products.all })
 }

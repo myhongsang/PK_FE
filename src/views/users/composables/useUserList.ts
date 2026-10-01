@@ -1,71 +1,72 @@
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { refDebounced, watchDebounced } from '@vueuse/core'
+import { keepPreviousData, useQuery } from '@tanstack/vue-query'
+import { refDebounced } from '@vueuse/core'
 
 import { getUsers } from '@/api/users'
-import { buildCacheKey, getCached, setCached } from '@/lib/page-cache'
+import { queryKeys } from '@/lib/query-keys'
 import { resolvePageTarget } from '@/lib/pagination-guard'
 import { usePageQuery } from '@/lib/use-page-query'
 import { counts } from '@/stores/counts'
 import type { SearchSuggestion } from '@/lib/search'
-import type { PageResult } from '@/types/pagination'
 import type { UserItem } from '@/types/user'
 
 export function useUserList() {
   const { t } = useI18n()
 
-  const users = ref<UserItem[]>([])
-  const loading = ref(false)
-  const errorMessage = ref('')
-
   const search = ref('')
   const debouncedSearch = refDebounced(search, 300)
-  const searchResults = ref<UserItem[]>([])
 
   const currentPage = ref(1)
-  const totalPages = ref(1)
   usePageQuery(currentPage)
 
-  let searchSeq = 0
-  let loadSeq = 0
+  const term = computed(() => debouncedSearch.value.trim())
 
+  const listParams = computed(() => ({
+    page: currentPage.value,
+    q: term.value || undefined,
+  }))
+
+  const listQuery = useQuery({
+    queryKey: computed(() => queryKeys.users.list(listParams.value)),
+    queryFn: () => getUsers(listParams.value.q, listParams.value.page),
+    placeholderData: keepPreviousData,
+  })
+
+  const users = computed<UserItem[]>(() => listQuery.data.value?.rows ?? [])
   const displayedUsers = computed(() => users.value)
 
+  const loading = computed(() => listQuery.isPending.value)
+
+  const errorMessage = computed(() => {
+    const error = listQuery.error.value
+    if (!error)
+      return ''
+    return error instanceof Error ? error.message : t('common.unableToLoad')
+  })
+
+  const totalPages = computed(() =>
+    resolvePageTarget(currentPage.value, listQuery.data.value?.meta.totalPages ?? 1).lastPage,
+  )
+
+  const suggestParams = computed(() => ({ q: term.value || undefined }))
+
+  const suggestQuery = useQuery({
+    queryKey: computed(() => queryKeys.users.suggest(suggestParams.value)),
+    queryFn: () => getUsers(suggestParams.value.q),
+    enabled: computed(() => term.value !== ''),
+  })
+
   const suggestions = computed<SearchSuggestion[]>(() => {
-    const term = search.value.trim()
-    if (!term || searchResults.value.length === 0) return []
-    return searchResults.value.slice(0, 6).map((user) => ({
+    const data = suggestQuery.data.value
+    if (!search.value.trim() || !data)
+      return []
+
+    return data.rows.slice(0, 6).map(user => ({
       label: user.name,
       detail: user.email,
     }))
   })
-
-  async function runSearch(term: string) {
-    const clean = term.trim()
-    const seq = ++searchSeq
-    if (!clean) {
-      searchResults.value = []
-      return
-    }
-
-    loading.value = true
-    errorMessage.value = ''
-    searchResults.value = []
-
-    try {
-      const result = await getUsers(clean)
-      if (seq === searchSeq) searchResults.value = result.rows
-    } catch (error) {
-      if (seq === searchSeq) {
-        errorMessage.value =
-          error instanceof Error ? error.message : t('common.unableToLoad')
-      }
-    } finally {
-      if (seq === searchSeq) loading.value = false
-    }
-  }
-
-  watchDebounced(search, (value) => { void runSearch(value) }, { debounce: 300 })
 
   const description = computed(() =>
     t('common.showingPage', {
@@ -75,79 +76,44 @@ export function useUserList() {
     }),
   )
 
-  function listCacheKey(page: number, term: string): string {
-    return buildCacheKey('users', {
-      page,
-      q: term.trim() || undefined,
-    })
-  }
-
-  function applyPage(result: PageResult<UserItem>, lastPage: number, term: string) {
-    users.value = result.rows
-    totalPages.value = lastPage
-
-    if (!term) counts.users = result.meta.total ?? result.rows.length
-  }
-
-  async function loadData(showLoading = true, force = false) {
-    errorMessage.value = ''
-    const seq = ++loadSeq
-
-    const page = currentPage.value
-    const term = debouncedSearch.value
-    const key = listCacheKey(page, term)
-    const cached = force ? undefined : getCached<PageResult<UserItem>>(key)
-
-    if (cached) {
-      const cachedTarget = resolvePageTarget(page, cached.meta.totalPages)
-
-      if (!cachedTarget.outOfRange) {
-        applyPage(cached, cachedTarget.lastPage, term)
-
-        if (seq === loadSeq) loading.value = false
-        return
-      }
-    }
-
-    if (showLoading) loading.value = true
-
-    try {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const result = await getUsers(term, page)
-
-        if (seq !== loadSeq) return
-
-        const target = resolvePageTarget(page, result.meta.totalPages)
-        if (target.outOfRange) {
-          currentPage.value = target.lastPage
-          continue
-        }
-
-        setCached(key, result)
-        applyPage(result, target.lastPage, term)
-        return
-      }
-    } catch (error) {
-      if (seq !== loadSeq) return
-      errorMessage.value =
-        error instanceof Error ? error.message : t('common.unableToLoad')
-    } finally {
-      if (seq === loadSeq) loading.value = false
-    }
-  }
-
   function goToPage(page: number) {
-    if (page < 1 || page > totalPages.value || page === currentPage.value) return
+    if (page < 1 || page > totalPages.value || page === currentPage.value)
+      return
+
     currentPage.value = page
-    void loadData(false)
   }
+
+  function loadData() {
+    return listQuery.refetch()
+  }
+
+  watch(
+    () => listQuery.data.value?.meta.totalPages,
+    (serverTotalPages) => {
+      if (serverTotalPages === undefined)
+        return
+
+      const target = resolvePageTarget(currentPage.value, serverTotalPages)
+
+      if (target.outOfRange)
+        currentPage.value = target.lastPage
+    },
+  )
+
+  watch(
+    () => listQuery.data.value,
+    (data) => {
+      if (!data || term.value)
+        return
+
+      counts.users = data.meta.total ?? data.rows.length
+    },
+    { immediate: true },
+  )
 
   watch(debouncedSearch, () => {
     currentPage.value = 1
-    void loadData(false)
   })
-
-  onMounted(() => loadData())
 
   return {
     users,

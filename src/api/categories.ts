@@ -4,7 +4,8 @@ import { API_ENDPOINTS } from '@/constants/api'
 import { STATUS_ACTIVE } from '@/constants/status'
 import { fetchRowsPage } from '@/api/search'
 import { excludeInactive } from '@/lib/status'
-import { buildCacheKey, getCached, invalidatePageCache, setCached } from '@/lib/page-cache'
+import { queryClient } from '@/lib/query-client'
+import { queryKeys } from '@/lib/query-keys'
 
 import type { PageResult } from '@/types/pagination'
 import type { CategoryItem, CategoryPayload } from '@/types/category'
@@ -47,17 +48,11 @@ export async function getCategories(
 }
 
 function invalidateCategoryCaches(): void {
-  invalidatePageCache('categories')
-  invalidatePageCache('products')
+  void queryClient.invalidateQueries({ queryKey: queryKeys.categories.all })
+  void queryClient.invalidateQueries({ queryKey: queryKeys.products.all })
 }
 
 export async function getAllCategories(): Promise<CategoryItem[]> {
-  const cacheKey = buildCacheKey('categories', { all: 1 })
-  const cached = getCached<CategoryItem[]>(cacheKey)
-
-  if (cached)
-    return cached
-
   const all: CategoryItem[] = []
   const maxPages = 20
 
@@ -70,7 +65,7 @@ export async function getAllCategories(): Promise<CategoryItem[]> {
       break
   }
 
-  return setCached(cacheKey, all)
+  return all
 }
 
 export async function createCategory(payload: CategoryPayload): Promise<CategoryItem> {
