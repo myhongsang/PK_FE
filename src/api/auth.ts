@@ -1,19 +1,18 @@
 import api from '@/api/api'
 import i18n from '@/i18n'
-import {
-  API_ENDPOINTS,
-  REMEMBERED_EMAIL_STORAGE_KEY,
-  REMEMBER_STORAGE_KEY,
-} from '@/constants/api'
-import { ROLE_ADMIN, ROLE_EMPLOYEE } from '@/constants/role'
+import { API_ENDPOINTS } from '@/constants/api'
+import { ROLE_ADMIN, ROLE_EMPLOYEE, type UserRole } from '@/constants/role'
 import { authStore } from '@/stores/auth'
-import type { UserRole } from '@/constants/role'
 import type { LoginPayload, LoginResult } from '@/types/auth'
 
 let verifiedSession: LoginResult | null | undefined
 let expiryTimer: ReturnType<typeof setTimeout> | undefined
 
 const MAX_TIMER_DELAY = 2_147_000_000
+
+const REMEMBER_STORAGE_KEY = 'remember_login'
+
+const REMEMBERED_EMAIL_STORAGE_KEY = 'remembered_email'
 
 function decodeJwtPayload(accessToken: string): Record<string, unknown> {
   try {
