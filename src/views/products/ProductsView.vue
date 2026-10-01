@@ -8,6 +8,7 @@ import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
 import ListCard from '@/components/ListCard.vue'
 import { Button } from '@/components/ui/button'
 import { Pagination } from '@/components/ui/pagination'
+import { usePermissions } from '@/lib/permissions'
 import type { ProductItem } from '@/types/product'
 
 import { useProductList } from '@/views/products/composables/useProductList'
@@ -16,6 +17,7 @@ import ProductsTable from '@/views/products/components/ProductsTable.vue'
 import ProductFormDialog from '@/views/products/components/ProductFormDialog.vue'
 
 const { t } = useI18n()
+const { canCreate, isAdmin } = usePermissions()
 
 const {
   displayedProducts,
@@ -69,8 +71,6 @@ async function onConfirmDelete() {
   deleteError.value = ''
   try {
     await deleteProduct(target.id)
-    // BE soft delete: bản ghi chỉ chuyển sang INACTIVE nên phải bỏ khỏi danh sách
-    // hiển thị rồi tải lại để bản ghi không xuất hiện lại sau khi refresh.
     removeItem(target.id)
     deleteOpen.value = false
     await loadData()
@@ -94,7 +94,7 @@ async function onConfirmDelete() {
     @retry="loadData"
   >
     <template #action>
-      <Button @click="openCreate">
+      <Button v-if="canCreate" @click="openCreate">
         <PlusIcon aria-hidden="true" />
         {{ $t('products.add') }}
       </Button>
@@ -114,6 +114,7 @@ async function onConfirmDelete() {
 
     <ProductsTable
       :products="displayedProducts"
+      :can-manage="isAdmin"
       @edit="openEdit"
       @remove="openDelete"
     />

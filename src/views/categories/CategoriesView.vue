@@ -9,6 +9,7 @@ import ListCard from '@/components/ListCard.vue'
 import SearchInput from '@/components/SearchInput.vue'
 import { Button } from '@/components/ui/button'
 import { Pagination } from '@/components/ui/pagination'
+import { usePermissions } from '@/lib/permissions'
 import type { CategoryItem } from '@/types/category'
 
 import { useCategoryList } from '@/views/categories/composables/useCategoryList'
@@ -16,6 +17,7 @@ import CategoriesTable from '@/views/categories/components/CategoriesTable.vue'
 import CategoryFormDialog from '@/views/categories/components/CategoryFormDialog.vue'
 
 const { t } = useI18n()
+const { canCreate, isAdmin } = usePermissions()
 
 const {
   displayedCategories,
@@ -64,8 +66,6 @@ async function onConfirmDelete() {
   deleteError.value = ''
   try {
     await deleteCategory(target.id)
-    // BE soft delete: bản ghi chỉ chuyển sang INACTIVE nên phải bỏ khỏi danh sách
-    // hiển thị rồi tải lại để bản ghi không xuất hiện lại sau khi refresh.
     removeItem(target.id)
     deleteOpen.value = false
     await loadData()
@@ -89,7 +89,7 @@ async function onConfirmDelete() {
     @retry="loadData"
   >
     <template #action>
-      <Button @click="openCreate">
+      <Button v-if="canCreate" @click="openCreate">
         <PlusIcon aria-hidden="true" />
         {{ $t('categories.add') }}
       </Button>
@@ -107,6 +107,7 @@ async function onConfirmDelete() {
 
     <CategoriesTable
       :categories="displayedCategories"
+      :can-manage="isAdmin"
       @edit="openEdit"
       @remove="openDelete"
     />

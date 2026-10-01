@@ -8,6 +8,7 @@ const { t, locale } = useI18n()
 
 defineProps<{
   products: ProductItem[]
+  canManage: boolean
 }>()
 
 const emit = defineEmits<{
@@ -32,7 +33,7 @@ function formatPrice(price: number | string) {
         <TableHead class="max-w-[280px]">{{ t('products.columns.description') }}</TableHead>
         <TableHead class="text-right">{{ t('products.columns.price') }}</TableHead>
         <TableHead class="text-center">{{ t('products.columns.stock') }}</TableHead>
-        <TableHead class="w-28 text-right">{{ t('products.columns.actions') }}</TableHead>
+        <TableHead v-if="canManage" class="w-28 text-right">{{ t('products.columns.actions') }}</TableHead>
       </TableRow>
     </TableHeader>
     <TableBody>
@@ -42,7 +43,7 @@ function formatPrice(price: number | string) {
         <TableCell class="max-w-[280px] whitespace-normal break-words text-muted-foreground">{{ item.description }}</TableCell>
         <TableCell class="text-right">{{ formatPrice(item.price) }}</TableCell>
         <TableCell class="text-center">{{ item.stock }}</TableCell>
-        <TableCell>
+        <TableCell v-if="canManage">
           <TableRowActions
             :edit-label="t('products.editAction')"
             :delete-label="t('products.deleteAction')"

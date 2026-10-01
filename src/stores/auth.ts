@@ -1,12 +1,14 @@
 import { readonly, shallowRef } from 'vue'
 import { createStore } from 'zustand/vanilla'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import type { UserRole } from '@/constants/role'
 import type { LoginResult } from '@/types/auth'
 
 export interface AuthUser {
   id: string
   name: string
   email: string
+  role: UserRole
 }
 
 export interface AuthState {
