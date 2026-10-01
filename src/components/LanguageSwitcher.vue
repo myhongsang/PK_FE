@@ -3,7 +3,8 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { LanguagesIcon } from '@lucide/vue'
 
-import { LOCALE_STORAGE_KEY, SUPPORTED_LOCALES } from '@/i18n'
+import { LOCALE_STORAGE_KEY, SUPPORTED_LOCALES } from '@/constants/i18n'
+import type { SupportedLocale } from '@/constants/i18n'
 
 const props = withDefaults(defineProps<{
   tone?: 'dark' | 'light'
@@ -13,10 +14,12 @@ const props = withDefaults(defineProps<{
 
 const { locale } = useI18n()
 
-const languages: Array<{ value: string, short: string, label: string }> = [
-  { value: 'vi', short: 'VI', label: 'Tiếng Việt' },
-  { value: 'en', short: 'EN', label: 'English' },
-]
+const localeMeta: Record<SupportedLocale, { short: string, label: string }> = {
+  vi: { short: 'VI', label: 'Tiếng Việt' },
+  en: { short: 'EN', label: 'English' },
+}
+
+const languages = SUPPORTED_LOCALES.map(value => ({ value, ...localeMeta[value] }))
 
 const activeClasses = computed(() =>
   props.tone === 'dark'
@@ -30,7 +33,7 @@ const idleClasses = computed(() =>
     : 'text-muted-foreground hover:text-foreground',
 )
 
-function switchTo(next: string) {
+function switchTo(next: SupportedLocale) {
   if (!(SUPPORTED_LOCALES as readonly string[]).includes(next))
     return
 
