@@ -6,12 +6,14 @@ import { getProducts } from '@/api/products'
 import { getAllCategories } from '@/api/categories'
 import { resolveEmptyReason } from '@/lib/empty-state'
 import { hasNumberInput, parseNumberInput } from '@/lib/price'
+import { buildCacheKey, getCached, setCached } from '@/lib/page-cache'
 import { resolvePageTarget } from '@/lib/pagination-guard'
 import { usePageQuery } from '@/lib/use-page-query'
 import { counts } from '@/stores/counts'
 import type { ProductFilters } from '@/api/products'
 import type { CategoryItem } from '@/types/category'
 import type { SearchSuggestion } from '@/lib/search'
+import type { PageResult } from '@/types/pagination'
 import type { ProductItem } from '@/types/product'
 
 export function useProductList() {
@@ -147,16 +149,61 @@ export function useProductList() {
     }
   }
 
-  async function loadData(showLoading = true) {
-    if (showLoading) loading.value = true
+  function listCacheKey(page: number, term: string, filters: ProductFilters): string {
+    return buildCacheKey('products', {
+      page,
+      q: term.trim() || undefined,
+      categoryId: filters.categoryId,
+      minPrice: filters.minPrice,
+      maxPrice: filters.maxPrice,
+    })
+  }
+
+  async function applyPage(
+    result: PageResult<ProductItem>,
+    lastPage: number,
+    seq: number,
+    term: string,
+    filters: ProductFilters,
+  ) {
+    products.value = result.rows
+    totalPages.value = lastPage
+
+    if (!term) counts.products = result.meta.total ?? result.rows.length
+
+    await syncSelectedCategoryIsEmpty(
+      seq,
+      result.meta.total ?? result.rows.length,
+      term.trim(),
+      filters,
+    )
+  }
+
+  async function loadData(showLoading = true, force = false) {
     errorMessage.value = ''
     const seq = ++loadSeq
 
+    const page = currentPage.value
+    const term = debouncedSearch.value
+    const filters = currentFilters()
+    const key = listCacheKey(page, term, filters)
+    const cached = force ? undefined : getCached<PageResult<ProductItem>>(key)
+
+    if (cached) {
+      const cachedTarget = resolvePageTarget(page, cached.meta.totalPages)
+
+      if (!cachedTarget.outOfRange) {
+        await applyPage(cached, cachedTarget.lastPage, seq, term, filters)
+
+        if (seq === loadSeq) loading.value = false
+        return
+      }
+    }
+
+    if (showLoading) loading.value = true
+
     try {
       for (let attempt = 0; attempt < 3; attempt++) {
-        const page = currentPage.value
-        const term = debouncedSearch.value
-        const filters = currentFilters()
         const result = await getProducts(term, page, filters)
 
         if (seq !== loadSeq) return
@@ -167,17 +214,8 @@ export function useProductList() {
           continue
         }
 
-        products.value = result.rows
-        totalPages.value = target.lastPage
-
-        if (!term) counts.products = result.meta.total ?? result.rows.length
-
-        await syncSelectedCategoryIsEmpty(
-          seq,
-          result.meta.total ?? result.rows.length,
-          term.trim(),
-          filters,
-        )
+        setCached(key, result)
+        await applyPage(result, target.lastPage, seq, term, filters)
         return
       }
     } catch (error) {
@@ -195,7 +233,6 @@ export function useProductList() {
     void loadData(false)
   }
 
-  /** Bỏ ngay bản ghi đã xoá khỏi danh sách hiển thị (soft delete bên BE). */
   function removeItem(id: ProductItem['id']) {
     const key = String(id)
     products.value = products.value.filter(product => String(product.id) !== key)
@@ -246,4 +283,3 @@ export function useProductList() {
     removeItem,
   }
 }
-

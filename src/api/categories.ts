@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from '@/constants/api'
 import { STATUS_ACTIVE } from '@/constants/status'
 import { fetchRowsPage } from '@/api/search'
 import { excludeInactive } from '@/lib/status'
+import { buildCacheKey, getCached, invalidatePageCache, setCached } from '@/lib/page-cache'
 
 import type { PageResult } from '@/types/pagination'
 import type { CategoryItem, CategoryPayload } from '@/types/category'
@@ -34,8 +35,6 @@ export async function getCategories(
     )
 
     return {
-      // Bản ghi đã xoá (status INACTIVE) không bao giờ được hiển thị lại,
-      // kể cả khi API trả về đầy đủ dữ liệu.
       rows: excludeInactive(result.rows.map(mapCategory)),
       meta: result.meta,
     }
@@ -47,7 +46,18 @@ export async function getCategories(
   }
 }
 
+function invalidateCategoryCaches(): void {
+  invalidatePageCache('categories')
+  invalidatePageCache('products')
+}
+
 export async function getAllCategories(): Promise<CategoryItem[]> {
+  const cacheKey = buildCacheKey('categories', { all: 1 })
+  const cached = getCached<CategoryItem[]>(cacheKey)
+
+  if (cached)
+    return cached
+
   const all: CategoryItem[] = []
   const maxPages = 20
 
@@ -60,13 +70,14 @@ export async function getAllCategories(): Promise<CategoryItem[]> {
       break
   }
 
-  return all
+  return setCached(cacheKey, all)
 }
 
 export async function createCategory(payload: CategoryPayload): Promise<CategoryItem> {
   try {
     const response = await api.post(API_ENDPOINTS.CATEGORIES, payload)
     const raw: any = response.data?.data ?? response.data ?? {}
+    invalidateCategoryCaches()
 
     return mapCategory(raw)
   } catch (error: any) {
@@ -84,6 +95,7 @@ export async function updateCategory(
   try {
     const response = await api.put(`${API_ENDPOINTS.CATEGORIES}/${id}`, payload)
     const raw: any = response.data?.data ?? response.data ?? {}
+    invalidateCategoryCaches()
 
     return mapCategory(raw)
   } catch (error: any) {
@@ -98,13 +110,12 @@ export async function deleteCategory(id: CategoryItem['id']): Promise<void> {
   try {
     await api.delete(`${API_ENDPOINTS.CATEGORIES}/${id}`)
   } catch (error: any) {
-    // Xoá là soft delete (status -> INACTIVE) nên đã xoá trước đó vẫn coi là thành công.
-    if (error.response?.status === 404)
-      return
-
-    throw new Error(
-      error.response?.data?.message ||
-      i18n.global.t('categories.deleteFailed')
-    )
+    if (error.response?.status !== 404)
+      throw new Error(
+        error.response?.data?.message ||
+        i18n.global.t('categories.deleteFailed')
+      )
   }
+
+  invalidateCategoryCaches()
 }

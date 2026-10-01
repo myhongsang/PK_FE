@@ -5,6 +5,7 @@ import {
   API_ENDPOINTS,
 } from '@/constants/api'
 import { authStore } from '@/stores/auth'
+import { invalidatePageCache } from '@/lib/page-cache'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -29,6 +30,7 @@ api.interceptors.response.use(
       && error.config?.url !== API_ENDPOINTS.AUTH.LOGIN
     ) {
       authStore.getState().clearSession()
+      invalidatePageCache()
 
       if (!window.location.pathname.startsWith('/login'))
         window.location.replace('/login?reason=expired')

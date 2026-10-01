@@ -3,10 +3,12 @@ import { useI18n } from 'vue-i18n'
 import { refDebounced, watchDebounced } from '@vueuse/core'
 
 import { getUsers } from '@/api/users'
+import { buildCacheKey, getCached, setCached } from '@/lib/page-cache'
 import { resolvePageTarget } from '@/lib/pagination-guard'
 import { usePageQuery } from '@/lib/use-page-query'
 import { counts } from '@/stores/counts'
 import type { SearchSuggestion } from '@/lib/search'
+import type { PageResult } from '@/types/pagination'
 import type { UserItem } from '@/types/user'
 
 export function useUserList() {
@@ -73,15 +75,44 @@ export function useUserList() {
     }),
   )
 
-  async function loadData(showLoading = true) {
-    if (showLoading) loading.value = true
+  function listCacheKey(page: number, term: string): string {
+    return buildCacheKey('users', {
+      page,
+      q: term.trim() || undefined,
+    })
+  }
+
+  function applyPage(result: PageResult<UserItem>, lastPage: number, term: string) {
+    users.value = result.rows
+    totalPages.value = lastPage
+
+    if (!term) counts.users = result.meta.total ?? result.rows.length
+  }
+
+  async function loadData(showLoading = true, force = false) {
     errorMessage.value = ''
     const seq = ++loadSeq
 
+    const page = currentPage.value
+    const term = debouncedSearch.value
+    const key = listCacheKey(page, term)
+    const cached = force ? undefined : getCached<PageResult<UserItem>>(key)
+
+    if (cached) {
+      const cachedTarget = resolvePageTarget(page, cached.meta.totalPages)
+
+      if (!cachedTarget.outOfRange) {
+        applyPage(cached, cachedTarget.lastPage, term)
+
+        if (seq === loadSeq) loading.value = false
+        return
+      }
+    }
+
+    if (showLoading) loading.value = true
+
     try {
       for (let attempt = 0; attempt < 3; attempt++) {
-        const page = currentPage.value
-        const term = debouncedSearch.value
         const result = await getUsers(term, page)
 
         if (seq !== loadSeq) return
@@ -92,10 +123,8 @@ export function useUserList() {
           continue
         }
 
-        users.value = result.rows
-        totalPages.value = target.lastPage
-
-        if (!term) counts.users = result.meta.total ?? result.rows.length
+        setCached(key, result)
+        applyPage(result, target.lastPage, term)
         return
       }
     } catch (error) {
