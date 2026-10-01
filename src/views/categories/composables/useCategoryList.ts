@@ -1,69 +1,74 @@
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { refDebounced, watchDebounced } from '@vueuse/core'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { refDebounced } from '@vueuse/core'
 
 import { getCategories } from '@/api/categories'
+import { queryKeys } from '@/lib/query-keys'
 import { resolvePageTarget } from '@/lib/pagination-guard'
 import { usePageQuery } from '@/lib/use-page-query'
 import { counts } from '@/stores/counts'
 import type { SearchSuggestion } from '@/lib/search'
+import type { PageResult } from '@/types/pagination'
 import type { CategoryItem } from '@/types/category'
 
 export function useCategoryList() {
   const { t } = useI18n()
-
-  const categories = ref<CategoryItem[]>([])
-  const loading = ref(false)
-  const errorMessage = ref('')
+  const queryClient = useQueryClient()
 
   const search = ref('')
   const debouncedSearch = refDebounced(search, 300)
-  const searchResults = ref<CategoryItem[]>([])
 
   const currentPage = ref(1)
-  const totalPages = ref(1)
   usePageQuery(currentPage)
 
-  let searchSeq = 0
-  let loadSeq = 0
+  const term = computed(() => debouncedSearch.value.trim())
 
+  const listParams = computed(() => ({
+    page: currentPage.value,
+    q: term.value || undefined,
+  }))
+
+  const listQuery = useQuery({
+    queryKey: computed(() => queryKeys.categories.list(listParams.value)),
+    queryFn: () => getCategories(listParams.value.q, listParams.value.page),
+    placeholderData: keepPreviousData,
+  })
+
+  const categories = computed<CategoryItem[]>(() => listQuery.data.value?.rows ?? [])
   const displayedCategories = computed(() => categories.value)
 
+  const loading = computed(() => listQuery.isPending.value)
+
+  const errorMessage = computed(() => {
+    const error = listQuery.error.value
+    if (!error)
+      return ''
+    return error instanceof Error ? error.message : t('common.unableToLoad')
+  })
+
+  const totalPages = computed(() =>
+    resolvePageTarget(currentPage.value, listQuery.data.value?.meta.totalPages ?? 1).lastPage,
+  )
+
+  const suggestParams = computed(() => ({ q: term.value || undefined }))
+
+  const suggestQuery = useQuery({
+    queryKey: computed(() => queryKeys.categories.suggest(suggestParams.value)),
+    queryFn: () => getCategories(suggestParams.value.q),
+    enabled: computed(() => term.value !== ''),
+  })
+
   const suggestions = computed<SearchSuggestion[]>(() => {
-    const term = search.value.trim()
-    if (!term || searchResults.value.length === 0) return []
-    return searchResults.value.slice(0, 6).map((category) => ({
+    const data = suggestQuery.data.value
+    if (!search.value.trim() || !data)
+      return []
+
+    return data.rows.slice(0, 6).map(category => ({
       label: category.name,
       detail: category.description,
     }))
   })
-
-  async function runSearch(term: string) {
-    const clean = term.trim()
-    const seq = ++searchSeq
-    if (!clean) {
-      searchResults.value = []
-      return
-    }
-
-    loading.value = true
-    errorMessage.value = ''
-    searchResults.value = []
-
-    try {
-      const result = await getCategories(clean)
-      if (seq === searchSeq) searchResults.value = result.rows
-    } catch (error) {
-      if (seq === searchSeq) {
-        errorMessage.value =
-          error instanceof Error ? error.message : t('common.unableToLoad')
-      }
-    } finally {
-      if (seq === searchSeq) loading.value = false
-    }
-  }
-
-  watchDebounced(search, (value) => { void runSearch(value) }, { debounce: 300 })
 
   const description = computed(() =>
     t('common.showingPage', {
@@ -73,59 +78,67 @@ export function useCategoryList() {
     }),
   )
 
-  async function loadData(showLoading = true) {
-    if (showLoading) loading.value = true
-    errorMessage.value = ''
-    const seq = ++loadSeq
-
-    try {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const page = currentPage.value
-        const term = debouncedSearch.value
-        const result = await getCategories(term, page)
-
-        if (seq !== loadSeq) return
-
-        const target = resolvePageTarget(page, result.meta.totalPages)
-        if (target.outOfRange) {
-          currentPage.value = target.lastPage
-          continue
-        }
-
-        categories.value = result.rows
-        totalPages.value = target.lastPage
-
-        if (!term) counts.categories = result.meta.total ?? result.rows.length
-        return
-      }
-    } catch (error) {
-      if (seq !== loadSeq) return
-      errorMessage.value =
-        error instanceof Error ? error.message : t('common.unableToLoad')
-    } finally {
-      if (seq === loadSeq) loading.value = false
-    }
-  }
-
   function goToPage(page: number) {
-    if (page < 1 || page > totalPages.value || page === currentPage.value) return
+    if (page < 1 || page > totalPages.value || page === currentPage.value)
+      return
+
     currentPage.value = page
-    void loadData(false)
   }
 
-  /** Bỏ ngay bản ghi đã xoá khỏi danh sách hiển thị (soft delete bên BE). */
-  function removeItem(id: CategoryItem['id']) {
-    const key = String(id)
-    categories.value = categories.value.filter(category => String(category.id) !== key)
-    searchResults.value = searchResults.value.filter(category => String(category.id) !== key)
+  function loadData() {
+    return listQuery.refetch()
   }
+
+  function removeItem(id: CategoryItem['id']) {
+    const target = String(id)
+
+    const drop = (
+      old: PageResult<CategoryItem> | undefined,
+    ): PageResult<CategoryItem> | undefined => {
+      if (!old)
+        return old
+
+      return { ...old, rows: old.rows.filter(category => String(category.id) !== target) }
+    }
+
+    const listKey = queryKeys.categories.list(listParams.value)
+
+    if (queryClient.getQueryData(listKey))
+      queryClient.setQueryData<PageResult<CategoryItem>>(listKey, drop)
+
+    const suggestKey = queryKeys.categories.suggest(suggestParams.value)
+
+    if (queryClient.getQueryData(suggestKey))
+      queryClient.setQueryData<PageResult<CategoryItem>>(suggestKey, drop)
+  }
+
+  watch(
+    () => listQuery.data.value?.meta.totalPages,
+    (serverTotalPages) => {
+      if (serverTotalPages === undefined)
+        return
+
+      const target = resolvePageTarget(currentPage.value, serverTotalPages)
+
+      if (target.outOfRange)
+        currentPage.value = target.lastPage
+    },
+  )
+
+  watch(
+    () => listQuery.data.value,
+    (data) => {
+      if (!data || term.value)
+        return
+
+      counts.categories = data.meta.total ?? data.rows.length
+    },
+    { immediate: true },
+  )
 
   watch(debouncedSearch, () => {
     currentPage.value = 1
-    void loadData(false)
   })
-
-  onMounted(() => loadData())
 
   return {
     categories,

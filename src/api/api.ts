@@ -4,6 +4,7 @@ import {
   API_BASE_URL,
   API_ENDPOINTS,
 } from '@/constants/api'
+import { queryClient } from '@/lib/query-client'
 import { authStore } from '@/stores/auth'
 
 const api = axios.create({
@@ -29,6 +30,7 @@ api.interceptors.response.use(
       && error.config?.url !== API_ENDPOINTS.AUTH.LOGIN
     ) {
       authStore.getState().clearSession()
+      queryClient.clear()
 
       if (!window.location.pathname.startsWith('/login'))
         window.location.replace('/login?reason=expired')

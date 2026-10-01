@@ -4,6 +4,8 @@ import { API_ENDPOINTS } from '@/constants/api'
 import { STATUS_ACTIVE } from '@/constants/status'
 import { fetchRowsPage } from '@/api/search'
 import { excludeInactive } from '@/lib/status'
+import { queryClient } from '@/lib/query-client'
+import { queryKeys } from '@/lib/query-keys'
 
 import type { PageResult } from '@/types/pagination'
 import type { ProductItem, ProductPayload } from '@/types/product'
@@ -54,8 +56,6 @@ export async function getProducts(
     )
 
     return {
-      // Bản ghi đã xoá (status INACTIVE) không bao giờ được hiển thị lại,
-      // kể cả khi API trả về đầy đủ dữ liệu.
       rows: excludeInactive(result.rows.map(mapProduct)),
       meta: result.meta,
     }
@@ -74,6 +74,7 @@ function unwrap(raw: any): any {
 export async function createProduct(payload: ProductPayload): Promise<ProductItem> {
   try {
     const response = await api.post(API_ENDPOINTS.PRODUCTS, payload)
+    void queryClient.invalidateQueries({ queryKey: queryKeys.products.all })
 
     return mapProduct(unwrap(response.data))
   } catch (error: any) {
@@ -90,6 +91,7 @@ export async function updateProduct(
 ): Promise<ProductItem> {
   try {
     const response = await api.patch(`${API_ENDPOINTS.PRODUCTS}/${id}`, payload)
+    void queryClient.invalidateQueries({ queryKey: queryKeys.products.all })
 
     return mapProduct(unwrap(response.data))
   } catch (error: any) {
@@ -104,13 +106,12 @@ export async function deleteProduct(id: ProductItem['id']): Promise<void> {
   try {
     await api.delete(`${API_ENDPOINTS.PRODUCTS}/${id}`)
   } catch (error: any) {
-    // Xoá là soft delete (status -> INACTIVE) nên đã xoá trước đó vẫn coi là thành công.
-    if (error.response?.status === 404)
-      return
-
-    throw new Error(
-      error.response?.data?.message ||
-      i18n.global.t('products.deleteFailed')
-    )
+    if (error.response?.status !== 404)
+      throw new Error(
+        error.response?.data?.message ||
+        i18n.global.t('products.deleteFailed')
+      )
   }
+
+  void queryClient.invalidateQueries({ queryKey: queryKeys.products.all })
 }
