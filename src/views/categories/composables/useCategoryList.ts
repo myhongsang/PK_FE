@@ -113,6 +113,13 @@ export function useCategoryList() {
     void loadData(false)
   }
 
+  /** Bỏ ngay bản ghi đã xoá khỏi danh sách hiển thị (soft delete bên BE). */
+  function removeItem(id: CategoryItem['id']) {
+    const key = String(id)
+    categories.value = categories.value.filter(category => String(category.id) !== key)
+    searchResults.value = searchResults.value.filter(category => String(category.id) !== key)
+  }
+
   watch(debouncedSearch, () => {
     currentPage.value = 1
     void loadData(false)
@@ -133,5 +140,6 @@ export function useCategoryList() {
     description,
     loadData,
     goToPage,
+    removeItem,
   }
 }

@@ -29,6 +29,7 @@ const {
   description,
   loadData,
   goToPage,
+  removeItem,
 } = useCategoryList()
 
 const formOpen = ref(false)
@@ -56,12 +57,16 @@ function openDelete(category: CategoryItem) {
 }
 
 async function onConfirmDelete() {
-  if (!deleting.value) return
+  const target = deleting.value
+  if (!target) return
 
   deletingBusy.value = true
   deleteError.value = ''
   try {
-    await deleteCategory(deleting.value.id)
+    await deleteCategory(target.id)
+    // BE soft delete: bản ghi chỉ chuyển sang INACTIVE nên phải bỏ khỏi danh sách
+    // hiển thị rồi tải lại để bản ghi không xuất hiện lại sau khi refresh.
+    removeItem(target.id)
     deleteOpen.value = false
     await loadData()
   } catch (error) {
