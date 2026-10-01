@@ -8,6 +8,7 @@ const { t } = useI18n()
 
 defineProps<{
   categories: CategoryItem[]
+  canManage: boolean
 }>()
 
 const emit = defineEmits<{
@@ -23,7 +24,7 @@ const emit = defineEmits<{
         <TableHead class="w-16">{{ t('categories.columns.id') }}</TableHead>
         <TableHead>{{ t('categories.columns.name') }}</TableHead>
         <TableHead>{{ t('categories.columns.description') }}</TableHead>
-        <TableHead class="w-28 text-right">{{ t('categories.columns.actions') }}</TableHead>
+        <TableHead v-if="canManage" class="w-28 text-right">{{ t('categories.columns.actions') }}</TableHead>
       </TableRow>
     </TableHeader>
     <TableBody>
@@ -31,7 +32,7 @@ const emit = defineEmits<{
         <TableCell class="text-muted-foreground">{{ item.id }}</TableCell>
         <TableCell class="font-medium">{{ item.name }}</TableCell>
         <TableCell class="text-muted-foreground">{{ item.description }}</TableCell>
-        <TableCell>
+        <TableCell v-if="canManage">
           <TableRowActions
             :edit-label="t('categories.editAction')"
             :delete-label="t('categories.deleteAction')"

@@ -1,3 +1,5 @@
+import type { UserRole } from '@/constants/role'
+
 export interface LoginPayload {
   email: string
   password: string
@@ -10,6 +12,7 @@ export interface LoginResult {
     id: string
     name: string
     email: string
+    role: UserRole
   }
   expiresAt?: number
 }

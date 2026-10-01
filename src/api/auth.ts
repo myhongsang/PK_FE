@@ -5,7 +5,9 @@ import {
   REMEMBERED_EMAIL_STORAGE_KEY,
   REMEMBER_STORAGE_KEY,
 } from '@/constants/api'
+import { ROLE_ADMIN, ROLE_EMPLOYEE } from '@/constants/role'
 import { authStore } from '@/stores/auth'
+import type { UserRole } from '@/constants/role'
 import type { LoginPayload, LoginResult } from '@/types/auth'
 
 let verifiedSession: LoginResult | null | undefined
@@ -13,22 +15,39 @@ let expiryTimer: ReturnType<typeof setTimeout> | undefined
 
 const MAX_TIMER_DELAY = 2_147_000_000
 
-function decodeJwtExpiresAt(accessToken: string): number | undefined {
+function decodeJwtPayload(accessToken: string): Record<string, unknown> {
   try {
     const payload = accessToken.split('.')[1]
 
     if (!payload)
-      return undefined
+      return {}
 
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
-    const claims = JSON.parse(atob(base64)) as { exp?: unknown }
-    const exp = Number(claims.exp)
 
-    return Number.isFinite(exp) && exp > 0 ? exp * 1000 : undefined
+    return JSON.parse(atob(base64)) as Record<string, unknown>
   }
   catch {
-    return undefined
+    return {}
   }
+}
+
+function decodeJwtExpiresAt(accessToken: string): number | undefined {
+  const exp = Number(decodeJwtPayload(accessToken).exp)
+
+  return Number.isFinite(exp) && exp > 0 ? exp * 1000 : undefined
+}
+
+function normalizeRole(value: unknown): UserRole | null {
+  const role = String(value ?? '').trim().toUpperCase()
+
+  return role === ROLE_ADMIN || role === ROLE_EMPLOYEE ? (role as UserRole) : null
+}
+
+// Ưu tiên role trong response, fallback sang JWT cho phiên đã lưu từ trước, mặc định EMPLOYEE.
+function resolveRole(rawRole: unknown, accessToken: string): UserRole {
+  return normalizeRole(rawRole)
+    ?? normalizeRole(decodeJwtPayload(accessToken).role)
+    ?? ROLE_EMPLOYEE
 }
 
 function resolveExpiresAt(raw: any, accessToken: string): number | undefined {
@@ -113,6 +132,7 @@ export async function login(
         id: rawUser.id ?? '',
         name: rawUser.name ?? '',
         email: rawUser.email ?? '',
+        role: resolveRole(rawUser.role, accessToken),
       },
       expiresAt: resolveExpiresAt(raw, accessToken),
     }
@@ -165,6 +185,7 @@ export function getStoredSession(): LoginResult | null {
       id: user.id ?? '',
       name: user.name ?? '',
       email: user.email ?? '',
+      role: resolveRole(user.role, token),
     },
     expiresAt: expiresAt ?? undefined,
   }
