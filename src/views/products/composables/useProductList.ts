@@ -6,6 +6,7 @@ import { refDebounced } from '@vueuse/core'
 import { getProducts } from '@/api/products'
 import { getAllCategories } from '@/api/categories'
 import { resolveEmptyReason } from '@/lib/empty-state'
+import { CATEGORY_OPTIONS_GC_TIME_MS, CATEGORY_OPTIONS_STALE_TIME_MS } from '@/lib/query-client'
 import { queryKeys } from '@/lib/query-keys'
 import { resolvePageTarget } from '@/lib/pagination-guard'
 import { hasNumberInput, parseNumberInput } from '@/lib/price'
@@ -15,6 +16,8 @@ import type { ProductFilters } from '@/api/products'
 import type { SearchSuggestion } from '@/lib/search'
 import type { PageResult } from '@/types/pagination'
 import type { ProductItem } from '@/types/product'
+
+let lastKnownProductsTotalPages = 1
 
 export function useProductList() {
   const { t } = useI18n()
@@ -69,9 +72,20 @@ export function useProductList() {
     return error instanceof Error ? error.message : t('common.unableToLoad')
   })
 
-  const totalPages = computed(() =>
-    resolvePageTarget(currentPage.value, listQuery.data.value?.meta.totalPages ?? 1).lastPage,
-  )
+  const totalPages = computed(() => {
+    const serverTotalPages = listQuery.data.value?.meta.totalPages
+
+    if (serverTotalPages !== undefined) {
+      lastKnownProductsTotalPages = resolvePageTarget(
+        currentPage.value,
+        serverTotalPages,
+      ).lastPage
+
+      return lastKnownProductsTotalPages
+    }
+
+    return lastKnownProductsTotalPages
+  })
 
   const suggestParams = computed(() => ({
     q: term.value || undefined,
@@ -103,6 +117,9 @@ export function useProductList() {
   const categoryOptionsQuery = useQuery({
     queryKey: queryKeys.categories.options,
     queryFn: getAllCategories,
+    staleTime: CATEGORY_OPTIONS_STALE_TIME_MS,
+    gcTime: CATEGORY_OPTIONS_GC_TIME_MS,
+    refetchOnMount: false,
   })
 
   const categoryOptions = computed(() => categoryOptionsQuery.data.value ?? [])

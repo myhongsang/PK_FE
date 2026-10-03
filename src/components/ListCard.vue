@@ -53,6 +53,10 @@ const emit = defineEmits<{
       </p>
 
       <slot v-else />
+
+      <div v-if="$slots.pagination">
+        <slot name="pagination" />
+      </div>
     </CardContent>
   </Card>
 </template>
