@@ -119,12 +119,14 @@ async function onConfirmDelete() {
       @remove="openDelete"
     />
 
-    <Pagination
-      :current-page="currentPage"
-      :total-pages="totalPages"
-      :disabled="loading"
-      @update:current-page="goToPage"
-    />
+    <template #pagination>
+      <Pagination
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :disabled="loading"
+        @update:current-page="goToPage"
+      />
+    </template>
   </ListCard>
 
   <ProductFormDialog
