@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { PlusIcon } from '@lucide/vue'
 
 import { deleteCategory } from '@/api/categories'
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
+import CreateButton from '@/components/CreateButton.vue'
 import ListCard from '@/components/ListCard.vue'
 import SearchInput from '@/components/SearchInput.vue'
-import { Button } from '@/components/ui/button'
 import { Pagination } from '@/components/ui/pagination'
 import { usePermissions } from '@/lib/permissions'
 import type { CategoryItem } from '@/types/category'
@@ -89,10 +88,7 @@ async function onConfirmDelete() {
     @retry="loadData"
   >
     <template #action>
-      <Button v-if="canCreate" @click="openCreate">
-        <PlusIcon aria-hidden="true" />
-        {{ $t('categories.add') }}
-      </Button>
+      <CreateButton v-if="canCreate" :label="$t('categories.add')" @click="openCreate" />
     </template>
 
     <template #toolbar>
