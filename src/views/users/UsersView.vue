@@ -1,10 +1,17 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
+import CreateButton from '@/components/CreateButton.vue'
 import ListCard from '@/components/ListCard.vue'
 import SearchInput from '@/components/SearchInput.vue'
 import { Pagination } from '@/components/ui/pagination'
+import { usePermissions } from '@/lib/permissions'
 
 import { useUserList } from '@/views/users/composables/useUserList'
 import UsersTable from '@/views/users/components/UsersTable.vue'
+import UserFormDialog from '@/views/users/components/UserFormDialog.vue'
+
+const { isAdmin } = usePermissions()
 
 const {
   displayedUsers,
@@ -19,6 +26,14 @@ const {
   loadData,
   goToPage,
 } = useUserList()
+
+const formOpen = ref(false)
+
+function openCreate() {
+  if (!isAdmin.value)
+    return
+  formOpen.value = true
+}
 </script>
 
 <template>
@@ -31,6 +46,10 @@ const {
     :empty-text="debouncedSearch ? $t('users.noResults') : $t('users.empty')"
     @retry="loadData"
   >
+    <template #action>
+      <CreateButton v-if="isAdmin" :label="$t('users.add')" @click="openCreate" />
+    </template>
+
     <template #toolbar>
       <div class="max-w-sm">
         <SearchInput
@@ -50,4 +69,10 @@ const {
       @update:current-page="goToPage"
     />
   </ListCard>
+
+  <UserFormDialog
+    v-if="isAdmin"
+    v-model:open="formOpen"
+    @saved="loadData"
+  />
 </template>
