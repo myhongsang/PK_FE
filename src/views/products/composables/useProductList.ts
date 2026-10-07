@@ -1,33 +1,22 @@
-import { computed, ref, watch } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useQuery } from '@tanstack/vue-query'
 import { refDebounced } from '@vueuse/core'
 
 import { getProducts } from '@/api/products'
 import { getAllCategories } from '@/api/categories'
+import { useSearchList } from '@/composables/use-search-list'
 import { resolveEmptyReason } from '@/lib/empty-state'
 import { CATEGORY_OPTIONS_GC_TIME_MS, CATEGORY_OPTIONS_STALE_TIME_MS } from '@/lib/query-client'
 import { queryKeys } from '@/lib/query-keys'
-import { resolvePageTarget } from '@/lib/pagination-guard'
 import { hasNumberInput, parseNumberInput } from '@/lib/price'
-import { usePageQuery } from '@/lib/use-page-query'
-import { counts } from '@/stores/counts'
 import type { ProductFilters } from '@/api/products'
-import type { SearchSuggestion } from '@/lib/search'
-import type { PageResult } from '@/types/pagination'
 import type { ProductItem } from '@/types/product'
 
 let lastKnownProductsTotalPages = 1
 
 export function useProductList() {
   const { t } = useI18n()
-  const queryClient = useQueryClient()
-
-  const search = ref('')
-  const debouncedSearch = refDebounced(search, 300)
-
-  const currentPage = ref(1)
-  usePageQuery(currentPage)
 
   const filterCategoryId = ref('')
   const filterMinPrice = ref<string | number>('')
@@ -35,84 +24,49 @@ export function useProductList() {
   const debouncedMinPrice = refDebounced(filterMinPrice, 300)
   const debouncedMaxPrice = refDebounced(filterMaxPrice, 300)
 
-  const term = computed(() => debouncedSearch.value.trim())
-
   const filters = computed<ProductFilters>(() => ({
     categoryId: filterCategoryId.value ? String(filterCategoryId.value) : undefined,
     minPrice: parseNumberInput(debouncedMinPrice.value),
     maxPrice: parseNumberInput(debouncedMaxPrice.value),
   }))
 
-  const listParams = computed(() => ({
-    page: currentPage.value,
-    q: term.value || undefined,
-    categoryId: filters.value.categoryId,
-    minPrice: filters.value.minPrice,
-    maxPrice: filters.value.maxPrice,
-  }))
+  const productsTotalPages = shallowRef(lastKnownProductsTotalPages)
 
-  const listQuery = useQuery({
-    queryKey: computed(() => queryKeys.products.list(listParams.value)),
-    queryFn: () => {
-      const { q, page, categoryId, minPrice, maxPrice } = listParams.value
-      return getProducts(q, page, { categoryId, minPrice, maxPrice })
-    },
-    placeholderData: keepPreviousData,
-  })
-
-  const products = computed<ProductItem[]>(() => listQuery.data.value?.rows ?? [])
-  const displayedProducts = computed(() => products.value)
-
-  const loading = computed(() => listQuery.isPending.value)
-
-  const errorMessage = computed(() => {
-    const error = listQuery.error.value
-    if (!error)
-      return ''
-    return error instanceof Error ? error.message : t('common.unableToLoad')
-  })
-
-  const totalPages = computed(() => {
-    const serverTotalPages = listQuery.data.value?.meta.totalPages
-
-    if (serverTotalPages !== undefined) {
-      lastKnownProductsTotalPages = resolvePageTarget(
-        currentPage.value,
-        serverTotalPages,
-      ).lastPage
-
-      return lastKnownProductsTotalPages
-    }
-
-    return lastKnownProductsTotalPages
-  })
-
-  const suggestParams = computed(() => ({
-    q: term.value || undefined,
-    categoryId: filters.value.categoryId,
-    minPrice: filters.value.minPrice,
-    maxPrice: filters.value.maxPrice,
-  }))
-
-  const suggestQuery = useQuery({
-    queryKey: computed(() => queryKeys.products.suggest(suggestParams.value)),
-    queryFn: () => {
-      const { q, categoryId, minPrice, maxPrice } = suggestParams.value
-      return getProducts(q, 1, { categoryId, minPrice, maxPrice })
-    },
-    enabled: computed(() => term.value !== ''),
-  })
-
-  const suggestions = computed<SearchSuggestion[]>(() => {
-    const data = suggestQuery.data.value
-    if (!search.value.trim() || !data)
-      return []
-
-    return data.rows.slice(0, 6).map(product => ({
+  const base = useSearchList<ProductItem>({
+    listKey: params => queryKeys.products.list(params),
+    suggestKey: params => queryKeys.products.suggest(params),
+    fetchList: (q, page, extra) =>
+      getProducts(q, page, {
+        categoryId: extra.categoryId,
+        minPrice: extra.minPrice,
+        maxPrice: extra.maxPrice,
+      }),
+    fetchSuggest: (q, extra) =>
+      getProducts(q, 1, {
+        categoryId: extra.categoryId,
+        minPrice: extra.minPrice,
+        maxPrice: extra.maxPrice,
+      }),
+    extraParams: () => ({
+      categoryId: filters.value.categoryId,
+      minPrice: filters.value.minPrice,
+      maxPrice: filters.value.maxPrice,
+    }),
+    toSuggestion: product => ({
       label: product.name,
       detail: product.description,
-    }))
+    }),
+    countKey: 'products',
+    totalPagesHolder: productsTotalPages,
+    extraResetSources: [filterCategoryId, debouncedMinPrice, debouncedMaxPrice],
   })
+
+  const products = base.rows
+  const displayedProducts = computed(() => products.value)
+  const search = base.search
+  const term = base.term
+  const currentPage = base.currentPage
+  const totalPages = base.totalPages
 
   const categoryOptionsQuery = useQuery({
     queryKey: queryKeys.categories.options,
@@ -124,10 +78,7 @@ export function useProductList() {
 
   const categoryOptions = computed(() => categoryOptionsQuery.data.value ?? [])
 
-  const visibleTotal = computed(() => {
-    const data = listQuery.data.value
-    return data ? (data.meta.total ?? data.rows.length) : 0
-  })
+  const visibleTotal = base.total
 
   const narrowedFurther = computed(() =>
     term.value !== ''
@@ -175,13 +126,7 @@ export function useProductList() {
     return reason === 'filtered' ? t('products.noResults') : t('products.empty')
   })
 
-  const description = computed(() =>
-    t('common.showingPage', {
-      page: currentPage.value,
-      totalPages: totalPages.value,
-      count: displayedProducts.value.length,
-    }),
-  )
+  const description = base.description
 
   function clearFilters() {
     filterCategoryId.value = ''
@@ -190,78 +135,27 @@ export function useProductList() {
   }
 
   function goToPage(page: number) {
-    if (page < 1 || page > totalPages.value || page === currentPage.value)
-      return
-
-    currentPage.value = page
+    base.goToPage(page)
+    lastKnownProductsTotalPages = productsTotalPages.value
   }
 
   function loadData() {
-    return listQuery.refetch()
+    return base.loadData()
   }
 
   function removeItem(id: ProductItem['id']) {
     const target = String(id)
 
-    const drop = (
-      old: PageResult<ProductItem> | undefined,
-    ): PageResult<ProductItem> | undefined => {
-      if (!old)
-        return old
-
-      return { ...old, rows: old.rows.filter(product => String(product.id) !== target) }
-    }
-
-    const listKey = queryKeys.products.list(listParams.value)
-
-    if (queryClient.getQueryData(listKey))
-      queryClient.setQueryData<PageResult<ProductItem>>(listKey, drop)
-
-    const suggestKey = queryKeys.products.suggest(suggestParams.value)
-
-    if (queryClient.getQueryData(suggestKey))
-      queryClient.setQueryData<PageResult<ProductItem>>(suggestKey, drop)
+    base.removeCached(product => String(product.id) === target)
   }
-
-  watch(
-    () => listQuery.data.value?.meta.totalPages,
-    (serverTotalPages) => {
-      if (serverTotalPages === undefined)
-        return
-
-      const target = resolvePageTarget(currentPage.value, serverTotalPages)
-
-      if (target.outOfRange)
-        currentPage.value = target.lastPage
-    },
-  )
-
-  watch(
-    () => listQuery.data.value,
-    (data) => {
-      if (!data || term.value)
-        return
-
-      counts.products = data.meta.total ?? data.rows.length
-    },
-    { immediate: true },
-  )
-
-  watch(debouncedSearch, () => {
-    currentPage.value = 1
-  })
-
-  watch([filterCategoryId, debouncedMinPrice, debouncedMaxPrice], () => {
-    currentPage.value = 1
-  })
 
   return {
     products,
     displayedProducts,
-    loading,
-    errorMessage,
+    loading: base.loading,
+    errorMessage: base.errorMessage,
     search,
-    suggestions,
+    suggestions: base.suggestions,
     currentPage,
     totalPages,
     categoryOptions,
