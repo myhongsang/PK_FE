@@ -42,7 +42,6 @@ function normalizeRole(value: unknown): UserRole | null {
   return role === ROLE_ADMIN || role === ROLE_EMPLOYEE ? (role as UserRole) : null
 }
 
-// Ưu tiên role trong response, fallback sang JWT cho phiên đã lưu từ trước, mặc định EMPLOYEE.
 function resolveRole(rawRole: unknown, accessToken: string): UserRole {
   return normalizeRole(rawRole)
     ?? normalizeRole(decodeJwtPayload(accessToken).role)
@@ -136,7 +135,6 @@ export async function login(
       expiresAt: resolveExpiresAt(raw, accessToken),
     }
 
-    // Persist session to Zustand store (which syncs to localStorage)
     authStore.getState().setSession(result)
 
     try {
